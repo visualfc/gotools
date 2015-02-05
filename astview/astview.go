@@ -247,11 +247,11 @@ func (p *PackageView) PrintTypes(w io.Writer, types []*TypeDoc, level int) {
 		}
 		pos := p.fset.Position(d.Decl.Pos())
 		fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag, d.Type.Name, p.posText(pos))
-		p.PrintTypeFields(w, d.Decl, level+1)
 		p.printFuncsHelper(w, d.Funcs, level+1, tag_type_factor, "")
 		p.printFuncsHelper(w, d.Methods, level+1, tag_type_method, "")
-		p.PrintVars(w, d.Consts, level+1, tag_const, "")
-		p.PrintVars(w, d.Vars, level+1, tag_value, "")
+		p.PrintTypeFields(w, d.Decl, level+1)
+		//p.PrintVars(w, d.Consts, level+1, tag_const, "")
+		//p.PrintVars(w, d.Vars, level+1, tag_value, "")
 	}
 }
 
@@ -314,16 +314,8 @@ func (p *PackageView) PrintImports(w io.Writer, level int, tag, tag_folder strin
 
 func (p *PackageView) PrintFuncs(w io.Writer, level int, tag_folder string) {
 	hasFolder := false
-	if len(p.pdoc.Funcs) > 0 {
+	if len(p.pdoc.Funcs) > 0 || len(p.pdoc.Factorys) > 0 {
 		hasFolder = true
-	}
-	if !hasFolder {
-		for _, d := range p.pdoc.Types {
-			if len(d.Methods) > 0 {
-				hasFolder = true
-				break
-			}
-		}
 	}
 	if !hasFolder {
 		return
@@ -332,9 +324,7 @@ func (p *PackageView) PrintFuncs(w io.Writer, level int, tag_folder string) {
 		fmt.Fprintf(w, "%d,%s,Functions\n", level, tag_folder)
 		level++
 	}
-	for _, d := range p.pdoc.Types {
-		p.printFuncsHelper(w, d.Funcs, level, tag_type_factor, "")
-	}
+	p.printFuncsHelper(w, p.pdoc.Factorys, level, tag_type_factor, tag_func_folder)
 	p.printFuncsHelper(w, p.pdoc.Funcs, level, tag_func, tag_func_folder)
 }
 

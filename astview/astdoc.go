@@ -531,6 +531,7 @@ type PackageDoc struct {
 	Types       []*TypeDoc
 	Vars        []*ValueDoc
 	Funcs       []*FuncDoc
+	Factorys    []*FuncDoc
 	Bugs        []string
 }
 
@@ -552,6 +553,22 @@ func (doc *docReader) newDoc(importpath string, filenames []string) *PackageDoc 
 	p.Vars = makeValueDocs(doc.values, token.VAR)
 	p.Funcs = makeFuncDocs(doc.funcs)
 	p.Bugs = makeBugDocs(doc.bugs)
+
+	for _, d := range p.Types {
+		switch d.Type.Type.(type) {
+		case *ast.StructType:
+			p.Factorys = append(p.Factorys, d.Funcs...)
+			d.Funcs = make([]*FuncDoc, 0)
+		case *ast.InterfaceType:
+			p.Factorys = append(p.Factorys, d.Funcs...)
+			d.Funcs = make([]*FuncDoc, 0)
+		default:
+			p.Vars = append(p.Vars, d.Vars...)
+			d.Vars = make([]*ValueDoc, 0)
+			p.Consts = append(p.Consts, d.Consts...)
+			d.Consts = make([]*ValueDoc, 0)
+		}
+	}
 	return p
 }
 
