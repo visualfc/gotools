@@ -79,6 +79,7 @@ func runOracle(cmd *command.Command, args []string) {
 		fmt.Fprintf(os.Stderr, "oracle: %s.\n", err)
 		os.Exit(2)
 	}
+	res.WriteTo(os.Stdout)
 	if mode == "referrers" {
 		ref := res.Serial().Referrers
 		if ref != nil {
