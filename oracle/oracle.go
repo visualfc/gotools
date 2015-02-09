@@ -82,6 +82,8 @@ func runOracle(cmd *command.Command, args []string) {
 	if mode == "referrers" {
 		ref := res.Serial().Referrers
 		if ref != nil {
+			fmt.Fprintln(os.Stdout, ref.Desc)
+			fmt.Fprintln(os.Stdout, ref.ObjPos)
 			for _, v := range ref.Refs {
 				fmt.Fprintln(os.Stdout, v)
 			}
