@@ -29,7 +29,6 @@ func init() {
 	command.Register(gopresent.Command)
 	command.Register(goapi.Command)
 	command.Register(pkgs.Command)
-	//command.Register(oracle.Command)
 }
 
 func main() {
