@@ -812,7 +812,7 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 		for _, v := range uses_paths {
 			conf := &PkgConfig{
 				IgnoreFuncBodies: false,
-				AllowBinary:      false,
+				AllowBinary:      true,
 				WithTestFiles:    true,
 				Info: &types.Info{
 					Uses: make(map[*ast.Ident]types.Object),
@@ -820,9 +820,9 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 			}
 			w.imported[v] = nil
 			pkg, err := w.Import("", v, conf)
-			if err == nil && pkg != nil {
+			if err == nil && pkg != nil && conf.Info != nil {
 				for k, v := range conf.Info.Uses {
-					if v.String() == cursorObj.String() {
+					if k != nil && v != nil && v.String() == cursorObj.String() {
 						usages = append(usages, int(k.Pos()))
 					}
 				}
