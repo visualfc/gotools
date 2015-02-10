@@ -62,6 +62,7 @@ func init() {
 	Command.Flag.BoolVar(&typesFindInfo, "info", false, "find cursor info")
 	Command.Flag.BoolVar(&typesFindDef, "def", false, "find cursor define")
 	Command.Flag.BoolVar(&typesFindUse, "use", false, "find cursor usages")
+	Command.Flag.BoolVar(&typesFindDoc, "doc", false, "find cursor def doc")
 }
 
 type ObjKind int
@@ -416,7 +417,11 @@ func (w *PkgWalker) parseFile(dir, file string, src interface{}) (*ast.File, err
 	}
 
 	if f == nil {
-		f, err = parser.ParseFile(w.fset, filename, src, parser.AllErrors) //|parser.ParseComments)
+		flag := parser.AllErrors
+		if typesFindDoc {
+			flag |= parser.ParseComments
+		}
+		f, err = parser.ParseFile(w.fset, filename, src, flag)
 		if err != nil {
 			return f, err
 		}
@@ -732,24 +737,27 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 			fmt.Println(simpleObjInfo(cursorObj))
 		}
 	}
-	//if f, ok := w.parsedFileCache[w.fset.Position(cursorPos).Filename]; ok {
-	//	for _, d := range f.Decls {
-	//		if inRange(d, cursorPos) {
-	//			if fd, ok := d.(*ast.FuncDecl); ok {
-	//				fd.Body = nil
-	//			}
-	//			commentMap := ast.NewCommentMap(w.fset, f, f.Comments)
-	//			commentedNode := printer.CommentedNode{Node: d}
-	//			if comments := commentMap.Filter(d).Comments(); comments != nil {
-	//				commentedNode.Comments = comments
-	//			}
-	//			var b bytes.Buffer
-	//			printer.Fprint(&b, w.fset, &commentedNode)
-	//			b.Write([]byte("\n\n")) // Add a blank line between entries if we print documentation.
-	//			log.Println(w.nodeString(d))
-	//		}
-	//	}
-	//}
+
+	if typesFindDoc && typesFindDef {
+		pos := w.fset.Position(cursorPos)
+		file := w.parsedFileCache[pos.Filename]
+		if file != nil {
+			line := pos.Line
+			var group *ast.CommentGroup
+			for _, v := range file.Comments {
+				lastLine := w.fset.Position(v.End()).Line
+				if lastLine == line || lastLine == line-1 {
+					group = v
+				} else if lastLine > line {
+					break
+				}
+			}
+			if group != nil {
+				fmt.Println(group.Text())
+			}
+		}
+	}
+
 	if !typesFindUse {
 		return
 	}
