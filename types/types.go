@@ -24,6 +24,7 @@ import (
 
 	"github.com/visualfc/gotools/command"
 	"github.com/visualfc/gotools/stdlib"
+	"golang.org/x/tools/go/buildutil"
 	"golang.org/x/tools/go/gcimporter"
 	"golang.org/x/tools/go/types"
 )
@@ -49,6 +50,7 @@ var (
 	typesFileStdin   bool
 	typesFindUse     bool
 	typesFindDef     bool
+	typesFindUseAll  bool
 	typesFindInfo    bool
 	typesFindDoc     bool
 )
@@ -62,6 +64,7 @@ func init() {
 	Command.Flag.BoolVar(&typesFindInfo, "info", false, "find cursor info")
 	Command.Flag.BoolVar(&typesFindDef, "def", false, "find cursor define")
 	Command.Flag.BoolVar(&typesFindUse, "use", false, "find cursor usages")
+	Command.Flag.BoolVar(&typesFindUseAll, "all", false, "find cursor all usages in GOPATH")
 	Command.Flag.BoolVar(&typesFindDoc, "doc", false, "find cursor def doc")
 }
 
@@ -757,7 +760,6 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 			}
 		}
 	}
-
 	if !typesFindUse {
 		return
 	}
@@ -774,9 +776,56 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 				usages = append(usages, int(id.Pos()))
 			}
 		}
-		for id, obj := range pkgInfo.Uses {
-			if obj == cursorObj { //!= nil && cursorObj.Pos() == obj.Pos() {
-				usages = append(usages, int(id.Pos()))
+		if !typesFindUseAll {
+			for id, obj := range pkgInfo.Uses {
+				if obj == cursorObj { //!= nil && cursorObj.Pos() == obj.Pos() {
+					usages = append(usages, int(id.Pos()))
+				}
+			}
+		}
+	}
+	if typesFindUseAll {
+		var uses_paths []string
+		buildutil.ForEachPackage(w.context, func(importPath string, err error) {
+			if err != nil {
+				return
+			}
+			bp, err := w.importPath(importPath, 0)
+			if err != nil {
+				return
+			}
+			find := false
+			if bp.ImportPath == cursorObj.Pkg().Path() {
+				find = true
+			} else {
+				for _, v := range bp.Imports {
+					if v == cursorObj.Pkg().Path() {
+						find = true
+						break
+					}
+				}
+			}
+			if find {
+				uses_paths = append(uses_paths, bp.ImportPath)
+			}
+		})
+		for _, v := range uses_paths {
+			conf := &PkgConfig{
+				IgnoreFuncBodies: false,
+				AllowBinary:      false,
+				WithTestFiles:    true,
+				Info: &types.Info{
+					Uses: make(map[*ast.Ident]types.Object),
+				},
+			}
+			w.imported[v] = nil
+			pkg, err := w.Import("", v, conf)
+			if err == nil && pkg != nil {
+				for k, v := range conf.Info.Uses {
+					if v.String() == cursorObj.String() {
+						usages = append(usages, int(k.Pos()))
+					}
+				}
 			}
 		}
 	}
