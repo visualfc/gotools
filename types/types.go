@@ -684,8 +684,20 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 				Defs: make(map[*ast.Ident]types.Object),
 			},
 		}
+		//		if typesFindUseAll {
+		//			conf.IgnoreFuncBodies = false
+		//			conf.Info.Uses = make(map[*ast.Ident]types.Object)
+		//		}
 		pkg, _ := w.Import("", cursorPkg.Path(), conf)
 		if pkg != nil {
+			//			if typesFindUseAll {
+			//				for k, v := range conf.Info.Defs {
+			//					pkgInfo.Defs[k] = v
+			//				}
+			//				for k, v := range conf.Info.Uses {
+			//					pkgInfo.Uses[k] = v
+			//				}
+			//			}
 			if cursorIsInterfaceMethod {
 				for _, obj := range conf.Info.Defs {
 					if obj == nil {
@@ -776,18 +788,24 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 				usages = append(usages, int(id.Pos()))
 			}
 		}
-		if !typesFindUseAll {
-			for id, obj := range pkgInfo.Uses {
-				if obj == cursorObj { //!= nil && cursorObj.Pos() == obj.Pos() {
-					usages = append(usages, int(id.Pos()))
-				}
+		for id, obj := range pkgInfo.Uses {
+			if obj == cursorObj { //!= nil && cursorObj.Pos() == obj.Pos() {
+				usages = append(usages, int(id.Pos()))
 			}
 		}
 	}
+
 	if typesFindUseAll {
 		var uses_paths []string
-		buildutil.ForEachPackage(w.context, func(importPath string, err error) {
+		if pkg != cursorPkg {
+			usages = append(usages, int(cursorPos))
+			uses_paths = append(uses_paths, cursorPkg.Path())
+		}
+		buildutil.ForEachPackage(&build.Default, func(importPath string, err error) {
 			if err != nil {
+				return
+			}
+			if importPath == pkg.Path() {
 				return
 			}
 			bp, err := w.importPath(importPath, 0)
@@ -795,7 +813,7 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 				return
 			}
 			find := false
-			if bp.ImportPath == cursorObj.Pkg().Path() {
+			if bp.ImportPath == cursorPkg.Path() {
 				find = true
 			} else {
 				for _, v := range bp.Imports {
@@ -806,9 +824,16 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 				}
 			}
 			if find {
+				for _, v := range uses_paths {
+					if v == bp.ImportPath {
+						return
+					}
+				}
 				uses_paths = append(uses_paths, bp.ImportPath)
 			}
 		})
+
+		w.imported = make(map[string]*types.Package)
 		for _, v := range uses_paths {
 			conf := &PkgConfig{
 				IgnoreFuncBodies: false,
@@ -819,8 +844,8 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 				},
 			}
 			w.imported[v] = nil
-			pkg, err := w.Import("", v, conf)
-			if err == nil && pkg != nil && conf.Info != nil {
+			vpkg, _ := w.Import("", v, conf)
+			if vpkg != nil && conf.Info != nil && vpkg != pkg {
 				for k, v := range conf.Info.Uses {
 					if k != nil && v != nil && v.String() == cursorObj.String() {
 						usages = append(usages, int(k.Pos()))
