@@ -795,6 +795,11 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 		}
 	}
 
+	(sort.IntSlice(usages)).Sort()
+	for _, pos := range usages {
+		fmt.Println(w.fset.Position(token.Pos(pos)))
+	}
+
 	if typesFindUseAll {
 		var uses_paths []string
 		if pkg != cursorPkg {
@@ -844,6 +849,7 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 				},
 			}
 			w.imported[v] = nil
+			var usages []int
 			vpkg, _ := w.Import("", v, conf)
 			if vpkg != nil && conf.Info != nil && vpkg != pkg {
 				for k, v := range conf.Info.Uses {
@@ -852,11 +858,12 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 					}
 				}
 			}
+			(sort.IntSlice(usages)).Sort()
+			for _, pos := range usages {
+				fmt.Println(w.fset.Position(token.Pos(pos)))
+			}
+
 		}
-	}
-	(sort.IntSlice(usages)).Sort()
-	for _, pos := range usages {
-		fmt.Println(w.fset.Position(token.Pos(pos)))
 	}
 }
 
