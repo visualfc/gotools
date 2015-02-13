@@ -792,6 +792,10 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 		return
 	}
 
+	if cursorPkg == nil {
+		return
+	}
+
 	var find_def_pkg string
 	var uses_paths []string
 	if pkg != cursorPkg {
