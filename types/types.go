@@ -190,12 +190,17 @@ func runTypes(cmd *command.Command, args []string) {
 			conf.Cursor = cursor
 			conf.IgnoreFuncBodies = false
 			conf.Info = &types.Info{
-				Uses: make(map[*ast.Ident]types.Object),
-				Defs: make(map[*ast.Ident]types.Object),
-				//Types : make(map[ast.Expr]types.TypeAndValue)
+				Uses:       make(map[*ast.Ident]types.Object),
+				Defs:       make(map[*ast.Ident]types.Object),
 				Selections: make(map[*ast.SelectorExpr]*types.Selection),
+				//Types : make(map[ast.Expr]types.TypeAndValue)
 				//Scopes : make(map[ast.Node]*types.Scope)
 				//Implicits : make(map[ast.Node]types.Object)
+			}
+			conf.XInfo = &types.Info{
+				Uses:       make(map[*ast.Ident]types.Object),
+				Defs:       make(map[*ast.Ident]types.Object),
+				Selections: make(map[*ast.SelectorExpr]*types.Selection),
 			}
 		}
 		pkg, err := w.Import("", pkgName, conf)
@@ -203,7 +208,7 @@ func runTypes(cmd *command.Command, args []string) {
 			log.Fatalln("error import path", err)
 		}
 		if cursor != nil && (typesFindInfo || typesFindDef || typesFindUse) {
-			w.LookupCursor(pkg, conf.Info, cursor)
+			w.LookupCursor(pkg, conf, cursor)
 		}
 	}
 	return
@@ -216,6 +221,7 @@ type FileCursor struct {
 	cursorPos int
 	pos       token.Pos
 	src       interface{}
+	xtest     bool
 }
 
 type PkgConfig struct {
@@ -223,7 +229,10 @@ type PkgConfig struct {
 	AllowBinary      bool
 	WithTestFiles    bool
 	Cursor           *FileCursor
+	Pkg              *types.Package
+	XPkg             *types.Package
 	Info             *types.Info
+	XInfo            *types.Info
 	Files            map[string]*ast.File
 	TestFiles        map[string]*ast.File
 	XTestFiles       map[string]*ast.File
@@ -334,13 +343,14 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 		}
 	}
 
-	parserFiles := func(filenames []string, cursor *FileCursor) (files []*ast.File) {
+	parserFiles := func(filenames []string, cursor *FileCursor, xtest bool) (files []*ast.File) {
 		for _, file := range filenames {
 			var f *ast.File
 			if cursor != nil && cursor.fileName == file {
 				f, err = w.parseFile(bp.Dir, file, cursor.src)
 				cursor.pos = token.Pos(w.fset.File(f.Pos()).Base()) + token.Pos(cursor.cursorPos)
 				cursor.fileDir = bp.Dir
+				cursor.xtest = xtest
 			} else {
 				f, err = w.parseFile(bp.Dir, file, nil)
 			}
@@ -351,8 +361,8 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 		}
 		return
 	}
-	files := parserFiles(filenames, conf.Cursor)
-	xfiles := parserFiles(bp.XTestGoFiles, conf.Cursor)
+	files := parserFiles(filenames, conf.Cursor, false)
+	xfiles := parserFiles(bp.XTestGoFiles, conf.Cursor, true)
 
 	typesConf := types.Config{
 		IgnoreFuncBodies: conf.IgnoreFuncBodies,
@@ -383,12 +393,14 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 	}
 	if pkg == nil {
 		pkg, err = typesConf.Check(checkName, w.fset, files, conf.Info)
+		conf.Pkg = pkg
 	}
 	w.imported[name] = pkg
 
 	if len(xfiles) > 0 {
-		xpkg, _ := typesConf.Check(checkName+"_test", w.fset, xfiles, conf.Info)
+		xpkg, _ := typesConf.Check(checkName+"_test", w.fset, xfiles, conf.XInfo)
 		w.imported[checkName+"_test"] = xpkg
+		conf.XPkg = xpkg
 	}
 	return
 }
@@ -434,12 +446,16 @@ func (w *PkgWalker) parseFile(dir, file string, src interface{}) (*ast.File, err
 	return f, nil
 }
 
-func (w *PkgWalker) LookupCursor(pkg *types.Package, pkgInfo *types.Info, cursor *FileCursor) {
+func (w *PkgWalker) LookupCursor(pkg *types.Package, conf *PkgConfig, cursor *FileCursor) {
 	is := w.CheckIsImport(cursor)
 	if is != nil {
-		w.LookupImport(pkg, pkgInfo, cursor, is)
+		if cursor.xtest {
+			w.LookupImport(conf.XPkg, conf.XInfo, cursor, is)
+		} else {
+			w.LookupImport(conf.Pkg, conf.Info, cursor, is)
+		}
 	} else {
-		w.LookupObjects(pkg, pkgInfo, cursor)
+		w.LookupObjects(conf, cursor)
 	}
 }
 
@@ -600,11 +616,55 @@ func (w *PkgWalker) lookupNamedMethod(named *types.Named, name string) (types.Ob
 	return nil, nil
 }
 
-func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, cursor *FileCursor) {
+func IsSamePkg(a, b *types.Package) bool {
+	if a == b {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return a.Path() == b.Path()
+}
+
+func IsSameObject(a, b types.Object) bool {
+	if a == b {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	var apath string
+	var bpath string
+	if a.Pkg() != nil {
+		apath = a.Pkg().Path()
+	}
+	if b.Pkg() != nil {
+		bpath = b.Pkg().Path()
+	}
+	if apath != bpath {
+		return false
+	}
+	if a.Id() != b.Id() {
+		return false
+	}
+	return a.String() == b.String()
+}
+
+func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 	var cursorObj types.Object
 	var cursorSelection *types.Selection
 	var cursorObjIsDef bool
 	//lookup defs
+
+	var pkg *types.Package
+	var pkgInfo *types.Info
+	if cursor.xtest {
+		pkgInfo = conf.XInfo
+		pkg = conf.XPkg
+	} else {
+		pkgInfo = conf.Info
+		pkg = conf.Pkg
+	}
 
 	_ = cursorObjIsDef
 	if cursorObj == nil {
@@ -650,11 +710,11 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 	}
 	cursorPkg := cursorObj.Pkg()
 	cursorPos := cursorObj.Pos()
-	var fieldTypeInfo *types.Info
+	//var fieldTypeInfo *types.Info
 	var fieldTypeObj types.Object
-	if cursorPkg == pkg {
-		fieldTypeInfo = pkgInfo
-	}
+	//	if cursorPkg == pkg {
+	//		fieldTypeInfo = pkgInfo
+	//	}
 	cursorIsInterfaceMethod := false
 	var cursorInterfaceTypeName string
 	if kind == ObjMethod && cursorSelection != nil && cursorSelection.Recv() != nil {
@@ -670,6 +730,20 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 					cursorInterfaceTypeName = typ.Obj().Name()
 				}
 				cursorIsInterfaceMethod = true
+			}
+		}
+	} else if kind == ObjField && cursorSelection != nil {
+		if cursorSelection != nil {
+			if recv := cursorSelection.Recv(); recv != nil {
+				var typ types.Type = recv.Underlying()
+				if pt, ok := recv.(*types.Pointer); ok {
+					typ = pt.Elem()
+				}
+				if typ != nil {
+					if name, ok := typ.(*types.Named); ok {
+						fieldTypeObj = name.Obj()
+					}
+				}
 			}
 		}
 	}
@@ -706,20 +780,32 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 				}
 			} else {
 				for _, obj := range conf.Info.Defs {
-					if obj != nil && obj.String() == cursorObj.String() {
-						cursorPos = obj.Pos()
-						break
+					if obj == nil {
+						continue
+					}
+					if _, ok := obj.(*types.TypeName); ok {
+						if IsSameObject(fieldTypeObj, obj) {
+							if t, ok := obj.Type().Underlying().(*types.Struct); ok {
+								for i := 0; i < t.NumFields(); i++ {
+									if t.Field(i).Id() == cursorObj.Id() {
+										cursorPos = t.Field(i).Pos()
+										break
+									}
+								}
+							}
+							break
+						}
 					}
 				}
 			}
 		}
-		if kind == ObjField || cursorIsInterfaceMethod {
-			fieldTypeInfo = conf.Info
-		}
+		//		if kind == ObjField || cursorIsInterfaceMethod {
+		//			fieldTypeInfo = conf.Info
+		//		}
 	}
-	if kind == ObjField {
-		fieldTypeObj = w.LookupStructFromField(fieldTypeInfo, cursorPkg, cursorObj, cursorPos)
-	}
+	//	if kind == ObjField {
+	//		fieldTypeObj = w.LookupStructFromField(fieldTypeInfo, cursorPkg, cursorObj, cursorPos)
+	//	}
 	if typesFindDef {
 		fmt.Println(w.fset.Position(cursorPos))
 	}
@@ -763,6 +849,7 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 	if !typesFindUse {
 		return
 	}
+
 	var usages []int
 	if kind == ObjPkgName {
 		for id, obj := range pkgInfo.Uses {
@@ -771,23 +858,61 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 			}
 		}
 	} else {
-		for id, obj := range pkgInfo.Defs {
-			if obj == cursorObj { //!= nil && cursorObj.Pos() == obj.Pos() {
-				usages = append(usages, int(id.Pos()))
-			}
-		}
+		//		for id, obj := range pkgInfo.Defs {
+		//			if obj == cursorObj { //!= nil && cursorObj.Pos() == obj.Pos() {
+		//				usages = append(usages, int(id.Pos()))
+		//			}
+		//		}
 		for id, obj := range pkgInfo.Uses {
 			if obj == cursorObj { //!= nil && cursorObj.Pos() == obj.Pos() {
 				usages = append(usages, int(id.Pos()))
 			}
 		}
 	}
+	var pkg_path string
+	var xpkg_path string
+	if conf.Pkg != nil {
+		pkg_path = conf.Pkg.Path()
+	}
+	if conf.XPkg != nil {
+		xpkg_path = conf.XPkg.Path()
+	}
+
+	if cursorPkg != nil && (cursorPkg.Path() == pkg_path ||
+		cursorPkg.Path() == xpkg_path) {
+		usages = append(usages, int(cursorPos))
+	}
 
 	(sort.IntSlice(usages)).Sort()
 	for _, pos := range usages {
 		fmt.Println(w.fset.Position(token.Pos(pos)))
 	}
-
+	//check look for current pkg.object on pkg_test
+	if typesFindUseAll || IsSamePkg(cursorPkg, conf.Pkg) {
+		var addInfo *types.Info
+		if conf.Cursor.xtest {
+			addInfo = conf.Info
+		} else {
+			addInfo = conf.XInfo
+		}
+		if addInfo != nil && cursorPkg != nil {
+			var usages []int
+			//		for id, obj := range addInfo.Defs {
+			//			if id != nil && obj != nil && obj.Id() == cursorObj.Id() {
+			//				usages = append(usages, int(id.Pos()))
+			//			}
+			//		}
+			for k, v := range addInfo.Uses {
+				if k != nil && v != nil && IsSameObject(v, cursorObj) {
+					usages = append(usages, int(k.Pos()))
+				}
+			}
+			(sort.IntSlice(usages)).Sort()
+			for _, pos := range usages {
+				fmt.Println(w.fset.Position(token.Pos(pos)))
+			}
+		}
+	}
 	if !typesFindUseAll {
 		return
 	}
@@ -798,15 +923,16 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 
 	var find_def_pkg string
 	var uses_paths []string
-	if pkg != cursorPkg {
+	if cursorPkg.Path() != pkg_path && cursorPkg.Path() != xpkg_path {
 		find_def_pkg = cursorPkg.Path()
 		uses_paths = append(uses_paths, cursorPkg.Path())
 	}
+
 	buildutil.ForEachPackage(&build.Default, func(importPath string, err error) {
 		if err != nil {
 			return
 		}
-		if importPath == pkg.Path() {
+		if importPath == conf.Pkg.Path() {
 			return
 		}
 		bp, err := w.importPath(importPath, 0)
@@ -843,14 +969,26 @@ func (w *PkgWalker) LookupObjects(pkg *types.Package, pkgInfo *types.Info, curso
 			Info: &types.Info{
 				Uses: make(map[*ast.Ident]types.Object),
 			},
+			XInfo: &types.Info{
+				Uses: make(map[*ast.Ident]types.Object),
+			},
 		}
 		w.imported[v] = nil
 		var usages []int
 		vpkg, _ := w.Import("", v, conf)
-		if vpkg != nil && conf.Info != nil && vpkg != pkg {
-			for k, v := range conf.Info.Uses {
-				if k != nil && v != nil && v.String() == cursorObj.String() {
-					usages = append(usages, int(k.Pos()))
+		if vpkg != nil && vpkg != pkg {
+			if conf.Info != nil {
+				for k, v := range conf.Info.Uses {
+					if k != nil && v != nil && IsSameObject(v, cursorObj) {
+						usages = append(usages, int(k.Pos()))
+					}
+				}
+			}
+			if conf.XInfo != nil {
+				for k, v := range conf.XInfo.Uses {
+					if k != nil && v != nil && IsSameObject(v, cursorObj) {
+						usages = append(usages, int(k.Pos()))
+					}
 				}
 			}
 		}
