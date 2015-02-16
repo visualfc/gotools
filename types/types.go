@@ -733,21 +733,18 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 			}
 		}
 	} else if kind == ObjField && cursorSelection != nil {
-		if cursorSelection != nil {
-			if recv := cursorSelection.Recv(); recv != nil {
-				var typ types.Type = recv.Underlying()
-				if pt, ok := recv.(*types.Pointer); ok {
-					typ = pt.Elem()
-				}
-				if typ != nil {
-					if name, ok := typ.(*types.Named); ok {
-						fieldTypeObj = name.Obj()
-					}
+		if recv := cursorSelection.Recv(); recv != nil {
+			var typ types.Type = recv
+			if pt, ok := recv.(*types.Pointer); ok {
+				typ = pt.Elem()
+			}
+			if typ != nil {
+				if name, ok := typ.(*types.Named); ok {
+					fieldTypeObj = name.Obj()
 				}
 			}
 		}
 	}
-
 	if cursorPkg != nil && cursorPkg != pkg &&
 		kind != ObjPkgName && w.isBinaryPkg(cursorPkg.Path()) {
 		conf := &PkgConfig{
@@ -778,7 +775,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 						}
 					}
 				}
-			} else {
+			} else if kind == ObjField && fieldTypeObj != nil {
 				for _, obj := range conf.Info.Defs {
 					if obj == nil {
 						continue
@@ -795,6 +792,13 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 							}
 							break
 						}
+					}
+				}
+			} else {
+				for k, v := range conf.Info.Defs {
+					if k != nil && v != nil && IsSameObject(v, cursorObj) {
+						cursorPos = k.Pos()
+						break
 					}
 				}
 			}
