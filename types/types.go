@@ -29,13 +29,6 @@ import (
 	"golang.org/x/tools/go/types"
 )
 
-/*
-liteide_stub type fmt
-liteide_stub type -v c:\go\src\cmd\go\testdata\local
-liteide_stub type -v std
-liteide_stub type -v ...
-*/
-
 var Command = &command.Command{
 	Run:       runTypes,
 	UsageLine: "types",
