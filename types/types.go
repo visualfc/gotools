@@ -186,7 +186,7 @@ func runTypes(cmd *command.Command, args []string) {
 				Uses:       make(map[*ast.Ident]types.Object),
 				Defs:       make(map[*ast.Ident]types.Object),
 				Selections: make(map[*ast.SelectorExpr]*types.Selection),
-				//Types : make(map[ast.Expr]types.TypeAndValue)
+				//Types:      make(map[ast.Expr]types.TypeAndValue),
 				//Scopes : make(map[ast.Node]*types.Scope)
 				//Implicits : make(map[ast.Node]types.Object)
 			}
@@ -572,6 +572,27 @@ func (w *PkgWalker) LookupStructFromField(info *types.Info, cursorPkg *types.Pac
 	return nil
 }
 
+func (w *PkgWalker) lookupNamedField(named *types.Named, name string) *types.Named {
+	if istruct, ok := named.Underlying().(*types.Struct); ok {
+		for i := 0; i < istruct.NumFields(); i++ {
+			field := istruct.Field(i)
+			if field.Anonymous() {
+				fieldType := orgType(field.Type())
+				if typ, ok := fieldType.(*types.Named); ok {
+					if na := w.lookupNamedField(typ, name); na != nil {
+						return na
+					}
+				}
+			} else {
+				if field.Name() == name {
+					return named
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func (w *PkgWalker) lookupNamedMethod(named *types.Named, name string) (types.Object, *types.Named) {
 	if iface, ok := named.Underlying().(*types.Interface); ok {
 		for i := 0; i < iface.NumMethods(); i++ {
@@ -643,6 +664,13 @@ func IsSameObject(a, b types.Object) bool {
 	return a.String() == b.String()
 }
 
+func orgType(typ types.Type) types.Type {
+	if pt, ok := typ.(*types.Pointer); ok {
+		return pt.Elem()
+	}
+	return typ
+}
+
 func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 	var cursorObj types.Object
 	var cursorSelection *types.Selection
@@ -694,9 +722,11 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 	if err != nil {
 		log.Fatalln(err)
 	}
+
 	if kind == ObjField {
 		if cursorObj.(*types.Var).Anonymous() {
-			if named, ok := cursorObj.Type().(*types.Named); ok {
+			typ := orgType(cursorObj.Type())
+			if named, ok := typ.(*types.Named); ok {
 				cursorObj = named.Obj()
 			}
 		}
@@ -727,13 +757,14 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 		}
 	} else if kind == ObjField && cursorSelection != nil {
 		if recv := cursorSelection.Recv(); recv != nil {
-			var typ types.Type = recv
-			if pt, ok := recv.(*types.Pointer); ok {
-				typ = pt.Elem()
-			}
+			typ := orgType(recv)
 			if typ != nil {
 				if name, ok := typ.(*types.Named); ok {
 					fieldTypeObj = name.Obj()
+					na := w.lookupNamedField(name, cursorObj.Name())
+					if na != nil {
+						fieldTypeObj = na.Obj()
+					}
 				}
 			}
 		}
