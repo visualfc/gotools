@@ -86,6 +86,45 @@ func SetExitStatus(n int) {
 	exitMu.Unlock()
 }
 
+func ParseArgs(arguments []string) error {
+	flag.CommandLine.Parse(arguments)
+	args := flag.Args()
+	if len(args) < 1 {
+		printUsage(os.Stderr)
+		return os.ErrInvalid
+	}
+
+	if len(args) == 1 && strings.TrimSpace(args[0]) == "" {
+		printUsage(os.Stderr)
+		return os.ErrInvalid
+	}
+
+	if args[0] == "help" {
+		if !help(args[1:]) {
+			return os.ErrInvalid
+		}
+		return nil
+	}
+
+	for _, cmd := range commands {
+		if cmd.Name() == args[0] && cmd.Run != nil {
+			cmd.Flag.Usage = func() { cmd.Usage() }
+			if cmd.CustomFlags {
+				args = args[1:]
+			} else {
+				cmd.Flag.Parse(args[1:])
+				args = cmd.Flag.Args()
+			}
+			cmd.Run(cmd, args)
+			return nil
+		}
+	}
+
+	fmt.Fprintf(os.Stderr, "%s: unknown subcommand %q\nRun '%s help' for usage.\n",
+		AppName, args[0], AppName)
+	return os.ErrInvalid
+}
+
 func Main() {
 	flag.Usage = usage
 	flag.Parse()
@@ -101,7 +140,9 @@ func Main() {
 	}
 
 	if args[0] == "help" {
-		help(args[1:])
+		if !help(args[1:]) {
+			os.Exit(2)
+		}
 		return
 	}
 
@@ -199,15 +240,15 @@ func usage() {
 }
 
 // help implements the 'help' command.
-func help(args []string) {
+func help(args []string) bool {
 	if len(args) == 0 {
 		printUsage(os.Stdout)
 		// not exit 2: succeeded at 'go help'.
-		return
+		return true
 	}
 	if len(args) != 1 {
 		fmt.Fprintf(os.Stderr, "usage: %s help command\n\nToo many arguments given.\n", AppName)
-		os.Exit(2) // failed at 'go help'
+		return false
 	}
 
 	arg := args[0]
@@ -218,19 +259,20 @@ func help(args []string) {
 		printUsage(buf)
 		usage := &Command{Long: buf.String()}
 		tmpl(os.Stdout, strings.Replace(documentationTemplate, "{{AppName}}", AppName, -1), append([]*Command{usage}, commands...))
-		return
+		return false
 	}
 
 	for _, cmd := range commands {
 		if cmd.Name() == arg {
 			tmpl(os.Stdout, strings.Replace(helpTemplate, "{{AppName}}", AppName, -1), cmd)
 			// not exit 2: succeeded at 'go help cmd'.
-			return
+			return true
 		}
 	}
 
 	fmt.Fprintf(os.Stderr, "Unknown help topic %#q.  Run '%s help'.\n", arg, AppName)
-	os.Exit(2) // failed at 'go help cmd'
+	//os.Exit(2) // failed at 'go help cmd'
+	return false
 }
 
 var atexitFuncs []func()
