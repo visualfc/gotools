@@ -63,16 +63,37 @@ func (c *Command) Usage() {
 	os.Exit(2)
 }
 
+func (c *Command) PrintUsage() {
+	fmt.Fprintf(Stderr, "usage: %s %s\n", AppName, c.UsageLine)
+	c.Flag.SetOutput(Stderr)
+	c.Flag.PrintDefaults()
+}
+
 // Runnable reports whether the command can be run; otherwise
 // it is a documentation pseudo-command such as importpath.
 func (c *Command) Runnable() bool {
 	return c.Run != nil
 }
 
+func (c *Command) Println(args ...interface{}) {
+	fmt.Fprintln(Stdout, args...)
+}
+
+func (c *Command) Printf(format string, args ...interface{}) {
+	fmt.Fprintf(Stdout, format, args...)
+}
+
 var commands []*Command
 
 func Register(cmd *Command) {
 	commands = append(commands, cmd)
+}
+
+func CommandList() (cmds []string) {
+	for _, cmd := range commands {
+		cmds = append(cmds, cmd.Name())
+	}
+	return
 }
 
 var exitStatus = 0
@@ -84,6 +105,16 @@ func SetExitStatus(n int) {
 		exitStatus = n
 	}
 	exitMu.Unlock()
+}
+
+var (
+	Stdout io.Writer = os.Stdout
+	Stderr io.Writer = os.Stderr
+)
+
+func SetOutput(stdout io.Writer, stderr io.Writer) {
+	Stdout = stdout
+	Stderr = stderr
 }
 
 func ParseArgs(arguments []string) error {
