@@ -43,7 +43,7 @@ func init() {
 	Command.Flag.BoolVar(&jsonTabIndent, "tabs", false, "indent with tabs")
 }
 
-func runJsonFmt(cmd *command.Command, args []string) {
+func runJsonFmt(cmd *command.Command, args []string) error {
 	opt := &JsonFmtOption{}
 	opt.List = jsonFmtList
 	opt.Compact = jsonFmtCompact
@@ -78,6 +78,7 @@ func runJsonFmt(cmd *command.Command, args []string) {
 			}
 		}
 	}
+	return nil
 }
 
 type JsonFmtOption struct {

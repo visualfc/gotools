@@ -70,14 +70,14 @@ func report(err error) {
 	exitCode = 2
 }
 
-func runGoimports(cmd *command.Command, args []string) {
+func runGoimports(cmd *command.Command, args []string) error {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	if goimportsTabWidth < 0 {
 		fmt.Fprintf(os.Stderr, "negative tabwidth %d\n", goimportsTabWidth)
 		exitCode = 2
 		os.Exit(exitCode)
-		return
+		return os.ErrInvalid
 	}
 
 	options = &Options{
@@ -107,6 +107,7 @@ func runGoimports(cmd *command.Command, args []string) {
 		}
 	}
 	os.Exit(exitCode)
+	return nil
 }
 
 func isGoFile(f os.FileInfo) bool {

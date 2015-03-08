@@ -36,9 +36,10 @@ func init() {
 	Command.Flag.StringVar(&presentOutput, "o", "", "output html file name")
 }
 
-func runPresent(cmd *command.Command, args []string) {
+func runPresent(cmd *command.Command, args []string) error {
 	if presentInput == "" || !isDoc(presentInput) {
 		cmd.Usage()
+		return os.ErrInvalid
 	}
 
 	if presentVerifyOnly {
@@ -48,7 +49,7 @@ func runPresent(cmd *command.Command, args []string) {
 			command.SetExitStatus(3)
 			command.Exit()
 		}
-		return
+		return nil
 	}
 	w := os.Stdout
 	if !presentStdout {
@@ -72,8 +73,8 @@ func runPresent(cmd *command.Command, args []string) {
 		fmt.Fprintf(os.Stderr, "present:%s", err)
 		command.SetExitStatus(3)
 		command.Exit()
-
 	}
+	return nil
 }
 
 var extensions = map[string]string{

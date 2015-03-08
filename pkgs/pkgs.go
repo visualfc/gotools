@@ -44,10 +44,11 @@ func init() {
 	Command.Flag.StringVar(&pkgsFind, "find", "", "find package by name")
 }
 
-func runPkgs(cmd *command.Command, args []string) {
+func runPkgs(cmd *command.Command, args []string) error {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	if len(args) != 0 {
 		cmd.Usage()
+		return os.ErrInvalid
 	}
 	//pkgIndexOnce.Do(loadPkgsList)
 	var pp PathPkgsIndex
@@ -64,11 +65,11 @@ func runPkgs(cmd *command.Command, args []string) {
 					p.copyBuild(pkg)
 					b, err := json.MarshalIndent(&p, "", "\t")
 					if err == nil {
-						os.Stdout.Write(b)
-						os.Stdout.Write([]byte{'\n'})
+						cmd.Stdout.Write(b)
+						cmd.Stdout.Write([]byte{'\n'})
 					}
 				} else {
-					fmt.Println(pkg.ImportPath)
+					cmd.Println(pkg.ImportPath)
 				}
 			}
 		}
@@ -84,17 +85,18 @@ func runPkgs(cmd *command.Command, args []string) {
 						p.copyBuild(pkg)
 						b, err := json.MarshalIndent(p, "", "\t")
 						if err == nil {
-							os.Stdout.Write(b)
-							os.Stdout.Write([]byte{'\n'})
+							cmd.Stdout.Write(b)
+							cmd.Stdout.Write([]byte{'\n'})
 						}
 					} else {
-						fmt.Println(pkg.Name)
+						cmd.Println(pkg.Name)
 					}
 					break
 				}
 			}
 		}
 	}
+	return nil
 }
 
 // A Package describes a single package found in a directory.

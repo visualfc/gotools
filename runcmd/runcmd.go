@@ -28,9 +28,10 @@ func init() {
 	Command.Flag.BoolVar(&execWaitEnter, "e", true, "wait enter and continue")
 }
 
-func runCmd(cmd *command.Command, args []string) {
+func runCmd(cmd *command.Command, args []string) error {
 	if len(args) == 0 {
 		cmd.Usage()
+		return os.ErrInvalid
 	}
 	if execWorkPath == "" {
 		var err error
@@ -39,7 +40,7 @@ func runCmd(cmd *command.Command, args []string) {
 			fmt.Fprintf(os.Stderr, "liteide_stub exec: os.Getwd() false\n")
 			command.SetExitStatus(3)
 			command.Exit()
-			return
+			return err
 		}
 	}
 	fileName := args[0]
@@ -71,6 +72,7 @@ func runCmd(cmd *command.Command, args []string) {
 	}
 
 	exitWaitEnter()
+	return nil
 }
 
 func exitWaitEnter() {

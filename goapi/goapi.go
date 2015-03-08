@@ -67,9 +67,10 @@ func init() {
 	Command.Flag.StringVar(&apiOutput, "o", "", "output file")
 }
 
-func runApi(cmd *command.Command, args []string) {
+func runApi(cmd *command.Command, args []string) error {
 	if len(args) == 0 && apiLookupInfo == "" {
 		cmd.Usage()
+		return os.ErrInvalid
 	}
 	if apiVerbose {
 		now := time.Now()
@@ -157,7 +158,7 @@ func runApi(cmd *command.Command, args []string) {
 					}
 				}
 			}
-			return
+			return nil
 		}
 		features = w.Features("")
 	} else {
@@ -217,7 +218,7 @@ lookup:
 		info := w.cursorInfo.info
 		if info == nil {
 			os.Exit(1)
-			return
+			return os.ErrInvalid
 		}
 		//		fmt.Println("kind,", info.Kind)
 		//		fmt.Println("name,", info.Name)
@@ -247,7 +248,7 @@ lookup:
 			}
 			fmt.Println("pos,", w.fset.Position(info.T.Pos()))
 		}
-		return
+		return nil
 	}
 
 	fail := false
@@ -263,7 +264,7 @@ lookup:
 	for _, f := range features {
 		fmt.Fprintf(bw, "%s\n", f)
 	}
-	return
+	return nil
 }
 
 type CursorInfo struct {

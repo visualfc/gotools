@@ -141,9 +141,10 @@ func simpleType(src string) string {
 	})
 }
 
-func runTypes(cmd *command.Command, args []string) {
+func runTypes(cmd *command.Command, args []string) error {
 	if len(args) < 1 {
 		cmd.Usage()
+		return nil
 	}
 	if typesVerbose {
 		now := time.Now()
@@ -204,7 +205,7 @@ func runTypes(cmd *command.Command, args []string) {
 			w.LookupCursor(pkg, conf, cursor)
 		}
 	}
-	return
+	return nil
 }
 
 type FileCursor struct {

@@ -32,9 +32,10 @@ func init() {
 	Command.Flag.BoolVar(&astViewStdin, "stdin", false, "input from stdin")
 }
 
-func runAstView(cmd *command.Command, args []string) {
+func runAstView(cmd *command.Command, args []string) error {
 	if len(args) == 0 {
 		cmd.Usage()
+		return os.ErrInvalid
 	}
 	if astViewStdin {
 		view, err := NewFilePackageSource(args[0], os.Stdin, true)
@@ -52,6 +53,7 @@ func runAstView(cmd *command.Command, args []string) {
 			command.Exit()
 		}
 	}
+	return nil
 }
 
 const (

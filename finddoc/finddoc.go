@@ -129,8 +129,7 @@ func init() {
 	Command.Flag.StringVar(&urlHeadTag, "urltag", "", "url head tag, liteide provate")
 }
 
-func runDoc(cmd *command.Command, args []string) {
-
+func runDoc(cmd *command.Command, args []string) error {
 	if !(constantFlag || functionFlag || interfaceFlag || methodFlag || packageFlag || structFlag || typeFlag || variableFlag) { // none set
 		constantFlag = true
 		functionFlag = true
@@ -163,6 +162,7 @@ func runDoc(cmd *command.Command, args []string) {
 		pkg, name = args[0], args[1]
 	default:
 		cmd.Usage()
+		return os.ErrInvalid
 	}
 	if strings.Contains(pkg, "/") {
 		fmt.Fprintf(os.Stderr, "doc: package name cannot contain slash (TODO)\n")
@@ -171,6 +171,7 @@ func runDoc(cmd *command.Command, args []string) {
 	for _, path := range Paths(pkg) {
 		lookInDirectory(path, name)
 	}
+	return nil
 }
 
 var slash = string(filepath.Separator)

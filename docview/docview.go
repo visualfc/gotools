@@ -40,9 +40,10 @@ func init() {
 	Command.Flag.StringVar(&docViewMode, "mode", "text", "Print mode [text|html|lite]")
 }
 
-func runDocView(cmd *command.Command, args []string) {
+func runDocView(cmd *command.Command, args []string) error {
 	if docViewFind == "" && docViewList == "" {
 		cmd.Usage()
+		return os.ErrInvalid
 	}
 
 	var template string
@@ -117,6 +118,7 @@ func runDocView(cmd *command.Command, args []string) {
 	}
 	contents := info.GetPkgList(docViewMode, template)
 	fmt.Fprintf(os.Stdout, "%s", contents)
+	return nil
 }
 
 var (

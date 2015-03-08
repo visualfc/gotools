@@ -25,7 +25,7 @@ import (
 type Command struct {
 	// Run runs the command.
 	// The args are the arguments after the command name.
-	Run func(cmd *Command, args []string)
+	Run func(cmd *Command, args []string) error
 
 	// UsageLine is the one-line usage message.
 	// The first word in the line is taken to be the command name.
@@ -43,6 +43,10 @@ type Command struct {
 	// CustomFlags indicates that the command will do its own
 	// flag parsing.
 	CustomFlags bool
+
+	Stdin  io.Reader
+	Stdout io.Writer
+	Stderr io.Writer
 }
 
 // Name returns the command's name: the first word in the usage line.
@@ -76,11 +80,11 @@ func (c *Command) Runnable() bool {
 }
 
 func (c *Command) Println(args ...interface{}) {
-	fmt.Fprintln(Stdout, args...)
+	fmt.Fprintln(c.Stdout, args...)
 }
 
 func (c *Command) Printf(format string, args ...interface{}) {
-	fmt.Fprintf(Stdout, format, args...)
+	fmt.Fprintf(c.Stdout, format, args...)
 }
 
 var commands []*Command
@@ -110,14 +114,10 @@ func SetExitStatus(n int) {
 var (
 	Stdout io.Writer = os.Stdout
 	Stderr io.Writer = os.Stderr
+	Stdin  io.Reader = os.Stdin
 )
 
-func SetOutput(stdout io.Writer, stderr io.Writer) {
-	Stdout = stdout
-	Stderr = stderr
-}
-
-func ParseArgs(arguments []string) error {
+func RunArgs(arguments []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
 	flag.CommandLine.Parse(arguments)
 	args := flag.Args()
 	if len(args) < 1 {
@@ -146,8 +146,10 @@ func ParseArgs(arguments []string) error {
 				cmd.Flag.Parse(args[1:])
 				args = cmd.Flag.Args()
 			}
-			cmd.Run(cmd, args)
-			return nil
+			cmd.Stdin = stdin
+			cmd.Stdout = stdout
+			cmd.Stderr = stderr
+			return cmd.Run(cmd, args)
 		}
 	}
 
@@ -186,6 +188,9 @@ func Main() {
 				cmd.Flag.Parse(args[1:])
 				args = cmd.Flag.Args()
 			}
+			cmd.Stdin = Stdin
+			cmd.Stdout = Stdout
+			cmd.Stderr = Stderr
 			cmd.Run(cmd, args)
 			Exit()
 			return

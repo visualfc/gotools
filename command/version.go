@@ -4,7 +4,10 @@
 
 package command
 
-import "runtime"
+import (
+	"os"
+	"runtime"
+)
 
 func init() {
 	Register(cmdVersion)
@@ -19,11 +22,12 @@ var cmdVersion = &Command{
 	Long:      `Version prints the version.`,
 }
 
-func runVersion(cmd *Command, args []string) {
+func runVersion(cmd *Command, args []string) error {
 	if len(args) != 0 {
 		cmd.PrintUsage()
-		return
+		return os.ErrInvalid
 	}
 
 	cmd.Printf("%s version %s [%s %s/%s]\n", AppName, AppVersion, runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	return nil
 }
