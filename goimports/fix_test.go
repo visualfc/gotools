@@ -721,12 +721,6 @@ func TestFindImportGoPath(t *testing.T) {
 
 	pkgIndexOnce = sync.Once{}
 
-	origStdlib := stdlib
-	defer func() {
-		stdlib = origStdlib
-	}()
-	stdlib = nil
-
 	// Test against imaginary bits/bytes package in std lib
 	bytesDir := filepath.Join(goroot, "src", "pkg", "bits", "bytes")
 	for _, tag := range build.Default.ReleaseTags {
