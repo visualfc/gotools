@@ -13,6 +13,7 @@ import (
 	"github.com/visualfc/gotools/goimports"
 	"github.com/visualfc/gotools/gopresent"
 	"github.com/visualfc/gotools/jsonfmt"
+	"github.com/visualfc/gotools/oracle"
 	"github.com/visualfc/gotools/pkgs"
 	"github.com/visualfc/gotools/runcmd"
 	"github.com/visualfc/gotools/types"
@@ -29,6 +30,7 @@ func init() {
 	command.Register(gopresent.Command)
 	command.Register(goapi.Command)
 	command.Register(pkgs.Command)
+	command.Register(oracle.Command)
 }
 
 func main() {

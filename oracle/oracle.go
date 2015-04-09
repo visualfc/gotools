@@ -46,9 +46,10 @@ func init() {
 	Command.Flag.BoolVar(&oracleReflect, "reflect", false, "Analyze reflection soundly (slow).")
 }
 
-func runOracle(cmd *command.Command, args []string) {
+func runOracle(cmd *command.Command, args []string) error {
 	if len(args) < 2 {
 		cmd.Usage()
+		return os.ErrInvalid
 	}
 	if os.Getenv("GOMAXPROCS") == "" {
 		n := runtime.NumCPU()
@@ -74,14 +75,22 @@ func runOracle(cmd *command.Command, args []string) {
 			args = []string{pkg.ImportPath}
 		}
 	}
-	res, err := oracle.Query(args, mode, oraclePos, nil, &build.Default, oracleReflect)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "oracle: %s.\n", err)
-		os.Exit(2)
+	query := oracle.Query{
+		Mode:       mode,
+		Pos:        oraclePos,
+		Build:      &build.Default,
+		Scope:      args,
+		PTALog:     nil,
+		Reflection: oracleReflect,
 	}
-	res.WriteTo(os.Stdout)
+
+	if err := oracle.Run(&query); err != nil {
+		fmt.Fprintf(os.Stderr, "oracle: %s.\n", err)
+		return err
+	}
+		
 	if mode == "referrers" {
-		ref := res.Serial().Referrers
+		ref := query.Serial().Referrers
 		if ref != nil {
 			fmt.Fprintln(os.Stdout, ref.Desc)
 			fmt.Fprintln(os.Stdout, ref.ObjPos)
@@ -90,6 +99,7 @@ func runOracle(cmd *command.Command, args []string) {
 			}
 		}
 	} else {
-		res.WriteTo(os.Stdout)
+		query.WriteTo(os.Stdout)
 	}
+	return nil
 }
