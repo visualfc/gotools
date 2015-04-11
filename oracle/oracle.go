@@ -74,14 +74,23 @@ func runOracle(cmd *command.Command, args []string) error {
 			args = []string{pkg.ImportPath}
 		}
 	}
-	res, err := oracle.Query(args, mode, oraclePos, nil, &build.Default, oracleReflect)
+
+	query := &oracle.Query{
+		Mode:       mode,
+		Pos:        oraclePos,
+		Build:      &build.Default,
+		Scope:      args,
+		PTALog:     nil,
+		Reflection: oracleReflect,
+	}
+	err := oracle.Run(query)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "oracle: %s.\n", err)
 		os.Exit(2)
 	}
-	res.WriteTo(os.Stdout)
+	query.WriteTo(os.Stdout)
 	if mode == "referrers" {
-		ref := res.Serial().Referrers
+		ref := query.Serial().Referrers
 		if ref != nil {
 			fmt.Fprintln(os.Stdout, ref.Desc)
 			fmt.Fprintln(os.Stdout, ref.ObjPos)
@@ -90,7 +99,7 @@ func runOracle(cmd *command.Command, args []string) error {
 			}
 		}
 	} else {
-		res.WriteTo(os.Stdout)
+		query.WriteTo(os.Stdout)
 	}
 	return nil
 }
