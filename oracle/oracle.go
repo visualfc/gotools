@@ -46,7 +46,7 @@ func init() {
 	Command.Flag.BoolVar(&oracleReflect, "reflect", false, "Analyze reflection soundly (slow).")
 }
 
-func runOracle(cmd *command.Command, args []string) {
+func runOracle(cmd *command.Command, args []string) error {
 	if len(args) < 2 {
 		cmd.Usage()
 	}
@@ -92,4 +92,5 @@ func runOracle(cmd *command.Command, args []string) {
 	} else {
 		res.WriteTo(os.Stdout)
 	}
+	return nil
 }
