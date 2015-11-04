@@ -237,16 +237,18 @@ func NewPkgWalker(context *build.Context) *PkgWalker {
 		context:         context,
 		fset:            token.NewFileSet(),
 		parsedFileCache: map[string]*ast.File{},
+		importingName:   map[string]bool{},
 		imported:        map[string]*types.Package{"unsafe": types.Unsafe},
 		gcimporter:      map[string]*types.Package{"unsafe": types.Unsafe},
 	}
 }
 
 type PkgWalker struct {
-	fset            *token.FileSet
-	context         *build.Context
-	current         *types.Package
-	importing       types.Package
+	fset    *token.FileSet
+	context *build.Context
+	current *types.Package
+	//importing       types.Package
+	importingName   map[string]bool
 	parsedFileCache map[string]*ast.File
 	imported        map[string]*types.Package // packages already imported
 	gcimporter      map[string]*types.Package
@@ -288,9 +290,9 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 	}
 	pkg = w.imported[name]
 	if pkg != nil {
-		if pkg == &w.importing {
-			return nil, fmt.Errorf("cycle importing package %q", name)
-		}
+		//		if pkg == &w.importing {
+		//			return nil, fmt.Errorf("cycle importing package %q", name)
+		//		}
 		return pkg, nil
 	}
 
@@ -311,14 +313,20 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 		checkName = bp.ImportPath
 	}
 
-	if err != nil {
-		return nil, err
-		//if _, nogo := err.(*build.NoGoError); nogo {
-		//	return
-		//}
-		//return
-		//log.Fatalf("pkg %q, dir %q: ScanDir: %v", name, info.Dir, err)
+	if w.importingName[checkName] {
+		return nil, fmt.Errorf("cycle importing package %q", name)
 	}
+
+	w.importingName[checkName] = true
+
+	//	if err != nil {
+	//		return nil, err
+	//		//if _, nogo := err.(*build.NoGoError); nogo {
+	//		//	return
+	//		//}
+	//		//return
+	//		//log.Fatalf("pkg %q, dir %q: ScanDir: %v", name, info.Dir, err)
+	//	}
 
 	filenames := append(append([]string{}, bp.GoFiles...), bp.CgoFiles...)
 	if conf.WithTestFiles {
@@ -389,6 +397,7 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 		pkg, err = typesConf.Check(checkName, w.fset, files, conf.Info)
 		conf.Pkg = pkg
 	}
+	w.importingName[checkName] = false
 	w.imported[name] = pkg
 
 	if len(xfiles) > 0 {
