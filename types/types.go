@@ -750,6 +750,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 	//	}
 	cursorIsInterfaceMethod := false
 	var cursorInterfaceTypeName string
+
 	if kind == ObjMethod && cursorSelection != nil && cursorSelection.Recv() != nil {
 		sig := cursorObj.(*types.Func).Type().Underlying().(*types.Signature)
 		if _, ok := sig.Recv().Type().Underlying().(*types.Interface); ok {
@@ -916,8 +917,9 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 		xpkg_path = conf.XPkg.Path()
 	}
 
-	if cursorPkg != nil && (cursorPkg.Path() == pkg_path ||
-		cursorPkg.Path() == xpkg_path) {
+	if cursorPkg != nil &&
+		(cursorPkg.Path() == pkg_path || cursorPkg.Path() == xpkg_path) &&
+		kind != ObjPkgName {
 		usages = append(usages, int(cursorPos))
 	}
 
