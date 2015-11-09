@@ -5,6 +5,9 @@ LiteIDE Golang Tools
 
 _LiteIDE is a simple, open source, cross-platform Go IDE._
 
+### GoTools
+_GoTools is a golang tools support for LiteIDE._
+
 ### Website
 * LiteIDE Source code
 <https://github.com/visualfc/liteide>
