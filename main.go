@@ -10,6 +10,7 @@ import (
 	"github.com/visualfc/gotools/docview"
 	"github.com/visualfc/gotools/finddoc"
 	"github.com/visualfc/gotools/goapi"
+	"github.com/visualfc/gotools/gofmt"
 	"github.com/visualfc/gotools/goimports"
 	"github.com/visualfc/gotools/gopresent"
 	"github.com/visualfc/gotools/jsonfmt"
@@ -31,6 +32,7 @@ func init() {
 	command.Register(goapi.Command)
 	command.Register(pkgs.Command)
 	command.Register(oracle.Command)
+	command.Register(gofmt.Command)
 }
 
 func main() {
