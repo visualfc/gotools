@@ -12,10 +12,11 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/visualfc/gotools/command"
-
+	"github.com/visualfc/gotools/pkgutil"
 	"golang.org/x/tools/go/types"
 )
 
@@ -299,6 +300,19 @@ func (p *PackageView) PrintImports(w io.Writer, level int, tag, tag_folder strin
 		fmt.Fprintf(w, "%d,%s,%s\n", level, tag_folder, "Imports")
 		level++
 	}
+	var parentPkg *pkgutil.Package
+	if pkgutil.IsVendorExperiment() {
+		for filename, _ := range p.pkg.Files {
+			if !filepath.IsAbs(filename) {
+				name, err := filepath.Abs(filename)
+				if err == nil {
+					filename = name
+				}
+			}
+			parentPkg = pkgutil.ImportFile(filename)
+			break
+		}
+	}
 	for _, name := range p.pdoc.Imports {
 		vname := "\"" + name + "\""
 		var ps []string
@@ -309,6 +323,9 @@ func (p *PackageView) PrintImports(w io.Writer, level int, tag, tag_folder strin
 					ps = append(ps, p.posText(pos))
 				}
 			}
+		}
+		if parentPkg != nil {
+			name, _ = pkgutil.VendoredImportPath(parentPkg, name)
 		}
 		fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag, name, strings.Join(ps, ";"))
 	}
