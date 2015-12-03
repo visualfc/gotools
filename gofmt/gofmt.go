@@ -34,6 +34,7 @@ var (
 	gofmtDiff         bool
 	gofmtAllErrors    bool
 	gofmtFixImports   bool
+	gofmtSortImports  bool
 	gofmtUseGodiffLib bool
 
 	// layout control
@@ -49,6 +50,7 @@ func init() {
 	Command.Flag.BoolVar(&gofmtDiff, "d", false, "display diffs instead of rewriting files")
 	Command.Flag.BoolVar(&gofmtAllErrors, "e", false, "report all errors (not just the first 10 on different lines)")
 	Command.Flag.BoolVar(&gofmtFixImports, "fiximports", false, "updates Go import lines, adding missing ones and removing unreferenced ones")
+	Command.Flag.BoolVar(&gofmtSortImports, "sortimports", false, "sort Go import lines use goimports style")
 	Command.Flag.BoolVar(&gofmtUseGodiffLib, "godiff", true, "diff use godiff library")
 
 	// layout control
@@ -82,13 +84,18 @@ func runGofmt(cmd *command.Command, args []string) error {
 		return os.ErrInvalid
 	}
 
+	if gofmtFixImports {
+		gofmtSortImports = true
+	}
+
 	options = &Options{
-		FixImports: gofmtFixImports,
-		TabWidth:   gofmtTabWidth,
-		TabIndent:  gofmtTabIndent,
-		Comments:   gofmtComments,
-		AllErrors:  gofmtAllErrors,
-		Fragment:   true,
+		FixImports:  gofmtFixImports,
+		SortImports: gofmtSortImports,
+		TabWidth:    gofmtTabWidth,
+		TabIndent:   gofmtTabIndent,
+		Comments:    gofmtComments,
+		AllErrors:   gofmtAllErrors,
+		Fragment:    true,
 	}
 
 	if len(args) == 0 {

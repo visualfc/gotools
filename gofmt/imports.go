@@ -25,9 +25,10 @@ import (
 
 // Options specifies options for processing files.
 type Options struct {
-	FixImports bool // Updates Go import lines, adding missing ones and removing unreferenced ones
-	Fragment   bool // Accept fragment of a source file (no package statement)
-	AllErrors  bool // Report all errors (not just the first 10 on different lines)
+	FixImports  bool // Updates Go import lines, adding missing ones and removing unreferenced ones
+	SortImports bool // Goimports style sort import lines.
+	Fragment    bool // Accept fragment of a source file (no package statement)
+	AllErrors   bool // Report all errors (not just the first 10 on different lines)
 
 	Comments  bool // Print comments (true if nil *Options provided)
 	TabIndent bool // Use tabs for indent (true if nil *Options provided)
@@ -52,29 +53,30 @@ func Process(filename string, src []byte, opt *Options) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		sortImports(fileSet, file)
-	} else {
-		ast.SortImports(fileSet, file)
 	}
 
-	imps := astutil.Imports(fileSet, file)
-
 	var spacesBefore []string // import paths we need spaces before
-	for _, impSection := range imps {
-		// Within each block of contiguous imports, see if any
-		// import lines are in different group numbers. If so,
-		// we'll need to put a space between them so it's
-		// compatible with gofmt.
-		lastGroup := -1
-		for _, importSpec := range impSection {
-			importPath, _ := strconv.Unquote(importSpec.Path.Value)
-			groupNum := importGroup(importPath)
-			if groupNum != lastGroup && lastGroup != -1 {
-				spacesBefore = append(spacesBefore, importPath)
-			}
-			lastGroup = groupNum
-		}
+	if opt.SortImports {
+		sortImports(fileSet, file)
+		imps := astutil.Imports(fileSet, file)
 
+		for _, impSection := range imps {
+			// Within each block of contiguous imports, see if any
+			// import lines are in different group numbers. If so,
+			// we'll need to put a space between them so it's
+			// compatible with gofmt.
+			lastGroup := -1
+			for _, importSpec := range impSection {
+				importPath, _ := strconv.Unquote(importSpec.Path.Value)
+				groupNum := importGroup(importPath)
+				if groupNum != lastGroup && lastGroup != -1 {
+					spacesBefore = append(spacesBefore, importPath)
+				}
+				lastGroup = groupNum
+			}
+		}
+	} else {
+		ast.SortImports(fileSet, file)
 	}
 
 	printerMode := printer.UseSpaces
