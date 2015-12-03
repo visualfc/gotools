@@ -48,7 +48,7 @@ func Process(filename string, src []byte, opt *Options) ([]byte, error) {
 	}
 
 	if opt.FixImports {
-		_, err = fixImports(fileSet, file)
+		_, err = fixImports(filename, fileSet, file)
 		if err != nil {
 			return nil, err
 		}

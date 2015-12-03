@@ -16,8 +16,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/visualfc/gotools/pkgutil"
 	"github.com/visualfc/gotools/stdlib"
-
 	"golang.org/x/tools/go/ast/astutil"
 )
 
@@ -47,7 +47,7 @@ func importGroup(importPath string) int {
 	return 0
 }
 
-func fixImports(fset *token.FileSet, f *ast.File) (added []string, err error) {
+func fixImports(filename string, fset *token.FileSet, f *ast.File) (added []string, err error) {
 	// refs are a set of possible package references currently unsatisfied by imports.
 	// first key: either base package (e.g. "fmt") or renamed package
 	// second key: referenced package symbol (e.g. "Println")
@@ -98,6 +98,7 @@ func fixImports(fset *token.FileSet, f *ast.File) (added []string, err error) {
 		name  string
 		err   error
 	}
+
 	results := make(chan result)
 	for pkgName, symbols := range refs {
 		if len(symbols) == 0 {
@@ -105,6 +106,10 @@ func fixImports(fset *token.FileSet, f *ast.File) (added []string, err error) {
 		}
 		go func(pkgName string, symbols map[string]bool) {
 			ipath, rename, err := findImport(pkgName, symbols)
+			// x/y/z/vendor/path to path
+			if pkgutil.IsVendorExperiment() {
+				ipath = pkgutil.VendorPathToImportPath(ipath)
+			}
 			r := result{ipath: ipath, err: err}
 			if rename {
 				r.name = pkgName
@@ -160,6 +165,7 @@ func importPathToNameGoPath(importPath string) (packageName string) {
 	if stdlib.IsStdPkg(importPath) {
 		return path.Base(importPath)
 	}
+
 	if buildPkg, err := build.Import(importPath, "", 0); err == nil {
 		return buildPkg.Name
 	} else {
@@ -359,7 +365,6 @@ func findImportGoPath(pkgName string, symbols map[string]bool) (string, bool, er
 	if len(pkgs) == 0 {
 		return "", false, nil
 	}
-
 	// If there are multiple candidate packages, the shortest one wins.
 	// This is a heuristic to prefer the standard library (e.g. "bytes")
 	// over e.g. "github.com/foo/bar/bytes".
