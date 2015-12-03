@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/visualfc/gotools/command"
+	"github.com/visualfc/gotools/pkgutil"
 	"github.com/visualfc/gotools/stdlib"
 	"golang.org/x/tools/go/buildutil"
 	"golang.org/x/tools/go/gcimporter"
@@ -285,9 +286,15 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 		}
 	}()
 
-	if strings.HasPrefix(name, ".") && parentDir != "" {
-		name = filepath.Join(parentDir, name)
+	if parentDir != "" {
+		if strings.HasPrefix(name, ".") {
+			name = filepath.Join(parentDir, name)
+		} else if pkgutil.IsVendorExperiment() {
+			parentPkg := pkgutil.ImportDir(parentDir)
+			name, _ = pkgutil.VendoredImportPath(parentPkg, name)
+		}
 	}
+
 	pkg = w.imported[name]
 	if pkg != nil {
 		//		if pkg == &w.importing {
@@ -297,7 +304,7 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 	}
 
 	if typesVerbose {
-		log.Println("parser pkg", name)
+		log.Println("parser pkg", parentDir, name)
 	}
 
 	bp, err := w.importPath(name, 0)
@@ -968,6 +975,11 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 		uses_paths = append(uses_paths, cursorPkg.Path())
 	}
 
+	cursorPkgPath := cursorObj.Pkg().Path()
+	if pkgutil.IsVendorExperiment() {
+		cursorPkgPath = pkgutil.VendorPathToImportPath(cursorPkgPath)
+	}
+
 	buildutil.ForEachPackage(&build.Default, func(importPath string, err error) {
 		if err != nil {
 			return
@@ -984,7 +996,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 			find = true
 		} else {
 			for _, v := range bp.Imports {
-				if v == cursorObj.Pkg().Path() {
+				if v == cursorPkgPath {
 					find = true
 					break
 				}

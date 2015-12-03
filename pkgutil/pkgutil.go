@@ -106,7 +106,10 @@ type Package struct {
 }
 
 func ImportFile(fileName string) *Package {
-	dir := filepath.Dir(fileName)
+	return ImportDir(filepath.Dir(fileName))
+}
+
+func ImportDir(dir string) *Package {
 	pkg, err := build.ImportDir(dir, build.FindOnly)
 	if err != nil {
 		return &Package{"", dir, ""}
