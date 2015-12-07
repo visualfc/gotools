@@ -690,12 +690,13 @@ func TestFixImports(t *testing.T) {
 	}
 
 	options := &Options{
-		FixImports: true,
-		TabWidth:   4,
-		TabIndent:  true,
-		Comments:   true,
-		Fragment:   true,
-		Format:     true,
+		FixImports:  true,
+		TabWidth:    4,
+		TabIndent:   true,
+		Comments:    true,
+		Fragment:    true,
+		Format:      true,
+		SortImports: true,
 	}
 
 	for _, tt := range tests {
