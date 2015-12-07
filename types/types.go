@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"go/ast"
 	"go/build"
+	"go/importer"
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"go/types"
 	"io/ioutil"
 	"log"
 	"os"
@@ -26,8 +28,6 @@ import (
 	"github.com/visualfc/gotools/pkgutil"
 	"github.com/visualfc/gotools/stdlib"
 	"golang.org/x/tools/go/buildutil"
-	"golang.org/x/tools/go/gcimporter"
-	"golang.org/x/tools/go/types"
 )
 
 var Command = &command.Command{
@@ -240,19 +240,19 @@ func NewPkgWalker(context *build.Context) *PkgWalker {
 		parsedFileCache: map[string]*ast.File{},
 		importingName:   map[string]bool{},
 		imported:        map[string]*types.Package{"unsafe": types.Unsafe},
-		gcimporter:      map[string]*types.Package{"unsafe": types.Unsafe},
+		gcimported:      importer.Default(),
 	}
 }
 
 type PkgWalker struct {
-	fset    *token.FileSet
-	context *build.Context
-	current *types.Package
-	//importing       types.Package
+	fset            *token.FileSet
+	context         *build.Context
+	current         *types.Package
 	importingName   map[string]bool
 	parsedFileCache map[string]*ast.File
 	imported        map[string]*types.Package // packages already imported
-	gcimporter      map[string]*types.Package
+	gcimported      types.Importer
+	//importing       types.Package
 }
 
 func contains(list []string, s string) bool {
@@ -376,24 +376,7 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 	typesConf := types.Config{
 		IgnoreFuncBodies: conf.IgnoreFuncBodies,
 		FakeImportC:      true,
-		Packages:         w.gcimporter,
-		Import: func(imports map[string]*types.Package, name string) (pkg *types.Package, err error) {
-			if pkg != nil {
-				return pkg, nil
-			}
-			if conf.AllowBinary && w.isBinaryPkg(name) {
-				pkg = w.gcimporter[name]
-				if pkg != nil && pkg.Complete() {
-					return
-				}
-				pkg, err = gcimporter.Import(imports, name)
-				if pkg != nil && pkg.Complete() {
-					w.gcimporter[name] = pkg
-					return
-				}
-			}
-			return w.Import(bp.Dir, name, &PkgConfig{IgnoreFuncBodies: true, AllowBinary: true, WithTestFiles: false})
-		},
+		Importer:         &Importer{w, conf, bp.Dir},
 		Error: func(err error) {
 			if typesVerbose {
 				log.Println(err)
@@ -413,6 +396,31 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 		conf.XPkg = xpkg
 	}
 	return
+}
+
+type Importer struct {
+	w    *PkgWalker
+	conf *PkgConfig
+	dir  string
+}
+
+func (im *Importer) Import(name string) (pkg *types.Package, err error) {
+	if im.conf.AllowBinary && im.w.isBinaryPkg(name) {
+		pkg, err = im.w.gcimported.Import(name)
+		if pkg != nil && pkg.Complete() {
+			return
+		}
+		//		pkg = im.w.gcimporter[name]
+		//		if pkg != nil && pkg.Complete() {
+		//			return
+		//		}
+		//		pkg, err = importer.Default().Import(name)
+		//		if pkg != nil && pkg.Complete() {
+		//			im.w.gcimporter[name] = pkg
+		//			return
+		//		}
+	}
+	return im.w.Import(im.dir, name, &PkgConfig{IgnoreFuncBodies: true, AllowBinary: true, WithTestFiles: false})
 }
 
 func (w *PkgWalker) parseFile(dir, file string, src interface{}) (*ast.File, error) {

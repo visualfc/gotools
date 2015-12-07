@@ -35,6 +35,7 @@ import (
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"go/types"
 	"os"
 	"path"
 	"path/filepath"
@@ -43,8 +44,6 @@ import (
 	"strings"
 
 	"github.com/visualfc/gotools/command"
-	_ "golang.org/x/tools/go/gcimporter"
-	"golang.org/x/tools/go/types"
 )
 
 const usageDoc = `Find documentation for names.

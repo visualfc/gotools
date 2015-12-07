@@ -9,6 +9,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"go/types"
 	"io"
 	"io/ioutil"
 	"os"
@@ -17,7 +18,6 @@ import (
 
 	"github.com/visualfc/gotools/command"
 	"github.com/visualfc/gotools/pkgutil"
-	"golang.org/x/tools/go/types"
 )
 
 var Command = &command.Command{

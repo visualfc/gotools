@@ -12,7 +12,6 @@ import (
 	"runtime"
 
 	"github.com/visualfc/gotools/command"
-
 	"golang.org/x/tools/oracle"
 )
 
@@ -88,7 +87,7 @@ func runOracle(cmd *command.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "oracle: %s.\n", err)
 		return err
 	}
-		
+
 	if mode == "referrers" {
 		ref := query.Serial().Referrers
 		if ref != nil {
