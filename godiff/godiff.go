@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/pmezard/go-difflib/difflib"
+	"github.com/visualfc/go-difflib/difflib"
 )
 
 func UnifiedDiffLines(a []string, b []string) (string, error) {
