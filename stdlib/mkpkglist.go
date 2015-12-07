@@ -8,11 +8,6 @@ import (
 )
 
 var pkgList = `
-cmd/cgo
-cmd/fix
-cmd/go
-cmd/gofmt
-cmd/yacc
 archive/tar
 archive/zip
 bufio
@@ -51,6 +46,7 @@ debug/elf
 debug/gosym
 debug/macho
 debug/pe
+debug/plan9obj
 encoding
 encoding/ascii85
 encoding/asn1
@@ -69,12 +65,17 @@ flag
 fmt
 go/ast
 go/build
+go/constant
 go/doc
 go/format
+go/importer
+go/internal/gccgoimporter
+go/internal/gcimporter
 go/parser
 go/printer
 go/scanner
 go/token
+go/types
 hash
 hash/adler32
 hash/crc32
@@ -87,9 +88,16 @@ image/color
 image/color/palette
 image/draw
 image/gif
+image/internal/imageutil
 image/jpeg
 image/png
 index/suffixarray
+internal/format
+internal/singleflight
+internal/syscall/windows
+internal/syscall/windows/registry
+internal/testenv
+internal/trace
 io
 io/ioutil
 log
@@ -100,6 +108,7 @@ math/cmplx
 math/rand
 mime
 mime/multipart
+mime/quotedprintable
 net
 net/http
 net/http/cgi
@@ -107,7 +116,9 @@ net/http/cookiejar
 net/http/fcgi
 net/http/httptest
 net/http/httputil
+net/http/internal
 net/http/pprof
+net/internal/socktest
 net/mail
 net/rpc
 net/rpc/jsonrpc
@@ -128,6 +139,7 @@ runtime/cgo
 runtime/debug
 runtime/pprof
 runtime/race
+runtime/trace
 sort
 strconv
 strings
