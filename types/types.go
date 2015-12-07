@@ -516,16 +516,27 @@ func (w *PkgWalker) LookupImport(pkg *types.Package, pkgInfo *types.Info, cursor
 	}
 
 	fid := pkg.Path() + "." + fname
+
 	var usages []int
 	for id, obj := range pkgInfo.Uses {
 		if obj != nil && obj.Id() == fid { //!= nil && cursorObj.Pos() == obj.Pos() {
-			usages = append(usages, int(id.Pos()))
+			if _, ok := obj.(*types.PkgName); ok {
+				usages = append(usages, int(id.Pos()))
+			}
 		}
 	}
 	(sort.IntSlice(usages)).Sort()
 	for _, pos := range usages {
 		fmt.Println(w.fset.Position(token.Pos(pos)))
 	}
+}
+
+func testObjKind(obj types.Object, kind ObjKind) bool {
+	k, err := parserObjKind(obj)
+	if err != nil {
+		return false
+	}
+	return k == kind
 }
 
 func parserObjKind(obj types.Object) (ObjKind, error) {
@@ -911,7 +922,9 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 	if kind == ObjPkgName {
 		for id, obj := range pkgInfo.Uses {
 			if obj != nil && obj.Id() == cursorObj.Id() { //!= nil && cursorObj.Pos() == obj.Pos() {
-				usages = append(usages, int(id.Pos()))
+				if _, ok := obj.(*types.PkgName); ok {
+					usages = append(usages, int(id.Pos()))
+				}
 			}
 		}
 	} else {
