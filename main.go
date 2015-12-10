@@ -11,7 +11,6 @@ import (
 	"github.com/visualfc/gotools/finddoc"
 	"github.com/visualfc/gotools/goapi"
 	"github.com/visualfc/gotools/gofmt"
-	"github.com/visualfc/gotools/goimports"
 	"github.com/visualfc/gotools/gopresent"
 	"github.com/visualfc/gotools/jsonfmt"
 	"github.com/visualfc/gotools/oracle"
@@ -27,7 +26,6 @@ func init() {
 	command.Register(runcmd.Command)
 	command.Register(docview.Command)
 	command.Register(astview.Command)
-	command.Register(goimports.Command)
 	command.Register(gopresent.Command)
 	command.Register(goapi.Command)
 	command.Register(pkgs.Command)
