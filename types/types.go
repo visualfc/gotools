@@ -123,10 +123,14 @@ func builtinInfo(id string) string {
 }
 
 func simpleObjInfo(obj types.Object) string {
+	s := obj.String()
 	pkg := obj.Pkg()
-	s := simpleType(obj.String())
-	if pkg != nil && pkg.Name() == "main" {
-		return strings.Replace(s, simpleType(pkg.Path())+".", "", -1)
+	if pkg != nil {
+		s = strings.Replace(s, pkg.Path(), pkg.Name(), -1)
+		s = simpleType(s)
+		if pkg.Name() == "main" {
+			s = strings.Replace(s, "main.", "", -1)
+		}
 	}
 	return s
 }
