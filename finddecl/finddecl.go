@@ -65,7 +65,7 @@ func printDecl(fset *token.FileSet, decl ast.Decl) {
 	case *ast.GenDecl:
 		fmt.Println(d.Tok, fset.Position(d.Pos()).Line, fset.Position(d.End()).Line)
 	case *ast.FuncDecl:
-		fmt.Println(d.Name, fset.Position(d.Pos()).Line, fset.Position(d.End()).Line)
+		fmt.Println("func", d.Name, fset.Position(d.Pos()).Line, fset.Position(d.End()).Line)
 	}
 }
 
