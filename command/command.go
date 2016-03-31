@@ -191,7 +191,10 @@ func Main() {
 			cmd.Stdin = Stdin
 			cmd.Stdout = Stdout
 			cmd.Stderr = Stderr
-			cmd.Run(cmd, args)
+			err := cmd.Run(cmd, args)
+			if err != nil {
+				SetExitStatus(2)
+			}
 			Exit()
 			return
 		}

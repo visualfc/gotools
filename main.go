@@ -8,6 +8,7 @@ import (
 	"github.com/visualfc/gotools/astview"
 	"github.com/visualfc/gotools/command"
 	"github.com/visualfc/gotools/docview"
+	"github.com/visualfc/gotools/finddecl"
 	"github.com/visualfc/gotools/finddoc"
 	"github.com/visualfc/gotools/goapi"
 	"github.com/visualfc/gotools/gofmt"
@@ -31,6 +32,7 @@ func init() {
 	command.Register(pkgs.Command)
 	command.Register(oracle.Command)
 	command.Register(gofmt.Command)
+	command.Register(finddecl.Command)
 }
 
 func main() {
