@@ -9,13 +9,14 @@ import (
 	"go/build"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/visualfc/gotools/command"
 )
 
 var Command = &command.Command{
 	Run:       runGotest,
-	UsageLine: "gotest -f filename [arguments...]",
+	UsageLine: "gotest -f filename",
 	Short:     "go test go filename",
 	Long:      `go test go filename`,
 }
@@ -29,6 +30,10 @@ func init() {
 func runGotest(cmd *command.Command, args []string) error {
 	if testFileName == "" {
 		cmd.Usage()
+		return os.ErrInvalid
+	}
+	if !strings.HasSuffix(testFileName, "_test.go") {
+		fmt.Println("The test filename must xxx_test.go")
 		return os.ErrInvalid
 	}
 
