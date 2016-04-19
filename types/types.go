@@ -882,13 +882,14 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 		fmt.Println(w.fset.Position(cursorPos))
 	}
 	if typesFindInfo {
-		if kind == ObjField && fieldTypeObj != nil {
+		/*if kind == ObjField && fieldTypeObj != nil {
 			typeName := fieldTypeObj.Name()
 			if fieldTypeObj.Pkg() != nil && fieldTypeObj.Pkg() != pkg {
 				typeName = fieldTypeObj.Pkg().Name() + "." + fieldTypeObj.Name()
 			}
 			fmt.Println(typeName, simpleObjInfo(cursorObj))
-		} else if kind == ObjBuiltin {
+		} else */
+		if kind == ObjBuiltin {
 			fmt.Println(builtinInfo(cursorObj.Name()))
 		} else if kind == ObjPkgName {
 			fmt.Println(cursorObj.String())
