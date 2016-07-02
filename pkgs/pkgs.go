@@ -21,9 +21,9 @@ import (
 
 var Command = &command.Command{
 	Run:       runPkgs,
-	UsageLine: "pkgs",
-	Short:     "print liteide_stub version",
-	Long:      `Version prints the liteide_stub version.`,
+	UsageLine: "pkgs [-list|-json] [-std]",
+	Short:     "print go package",
+	Long:      `print go package.`,
 }
 
 var (
