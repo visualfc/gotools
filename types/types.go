@@ -78,13 +78,17 @@ const (
 	ObjLabel
 	ObjBuiltin
 	ObjNil
+	ObjImplicit
+	ObjUnknown
+	ObjComment
 )
 
 var ObjKindName = []string{"none", "package",
 	"type", "interface", "struct",
 	"const", "var", "field",
 	"func", "method",
-	"label", "builtin", "nil"}
+	"label", "builtin", "nil",
+	"implicit", "unknown", "comment"}
 
 func (k ObjKind) String() string {
 	if k >= 0 && int(k) < len(ObjKindName) {
@@ -740,10 +744,12 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 			}
 		}
 	}
+	var cursorId *ast.Ident
 	if cursorObj == nil {
 		for id, obj := range pkgInfo.Defs {
 			if cursor.pos >= id.Pos() && cursor.pos <= id.End() {
 				cursorObj = obj
+				cursorId = id
 				cursorObjIsDef = true
 				break
 			}
@@ -758,12 +764,18 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 			}
 		}
 	}
-	if cursorObj == nil {
+
+	var kind ObjKind
+	if cursorObj != nil {
+		var err error
+		kind, err = parserObjKind(cursorObj)
+		if err != nil {
+			log.Fatalln(err)
+		}
+	} else if cursorId != nil {
+		kind = ObjImplicit
+	} else {
 		return
-	}
-	kind, err := parserObjKind(cursorObj)
-	if err != nil {
-		log.Fatalln(err)
 	}
 
 	if kind == ObjField {
@@ -774,8 +786,18 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 			}
 		}
 	}
-	cursorPkg := cursorObj.Pkg()
-	cursorPos := cursorObj.Pos()
+
+	var cursorPkg *types.Package
+	var cursorPos token.Pos
+
+	if cursorObj != nil {
+		cursorPkg = cursorObj.Pkg()
+		cursorPos = cursorObj.Pos()
+	} else {
+		cursorPkg = pkg
+		cursorPos = cursorId.Pos()
+	}
+
 	//var fieldTypeInfo *types.Info
 	var fieldTypeObj types.Object
 	//	if cursorPkg == pkg {
@@ -892,6 +914,8 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 			fmt.Println(builtinInfo(cursorObj.Name()))
 		} else if kind == ObjPkgName {
 			fmt.Println(cursorObj.String())
+		} else if kind == ObjImplicit {
+			fmt.Printf("%s is implicit\n", cursorId.Name)
 		} else if cursorIsInterfaceMethod {
 			fmt.Println(strings.Replace(simpleObjInfo(cursorObj), "(interface)", cursorPkg.Name()+"."+cursorInterfaceTypeName, 1))
 		} else {
@@ -937,9 +961,17 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 		//				usages = append(usages, int(id.Pos()))
 		//			}
 		//		}
-		for id, obj := range pkgInfo.Uses {
-			if obj == cursorObj { //!= nil && cursorObj.Pos() == obj.Pos() {
-				usages = append(usages, int(id.Pos()))
+		if cursorObj != nil {
+			for id, obj := range pkgInfo.Uses {
+				if obj == cursorObj { //!= nil && cursorObj.Pos() == obj.Pos() {
+					usages = append(usages, int(id.Pos()))
+				}
+			}
+		} else {
+			for id, obj := range pkgInfo.Uses {
+				if obj != nil && obj.Pos() == cursorPos { //!= nil && cursorObj.Pos() == obj.Pos() {
+					usages = append(usages, int(id.Pos()))
+				}
 			}
 		}
 	}
