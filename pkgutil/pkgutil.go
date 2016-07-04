@@ -2,7 +2,6 @@ package pkgutil
 
 import (
 	"go/build"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -131,7 +130,8 @@ func VendoredImportPath(parent *Package, path string) (found string, searched []
 	dir := filepath.Clean(parent.Dir)
 	root := filepath.Join(parent.Root, "src")
 	if !hasFilePathPrefix(dir, root) || len(dir) <= len(root) || dir[len(root)] != filepath.Separator {
-		log.Fatalf("invalid vendoredImportPath: dir=%q root=%q separator=%q", dir, root, string(filepath.Separator))
+		//log.Fatalf("invalid vendoredImportPath: dir=%q root=%q separator=%q", dir, root, string(filepath.Separator))
+		return
 	}
 	vpath := "vendor/" + path
 	for i := len(dir); i >= len(root); i-- {
