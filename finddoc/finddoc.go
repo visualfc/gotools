@@ -147,14 +147,12 @@ func runDoc(cmd *command.Command, args []string) error {
 	var pkg, name string
 	switch len(args) {
 	case 1:
+		name = args[0]
 		if packageFlag {
-			pkg = args[0]
-		} else if regexpFlag {
-			name = args[0]
-		} else if strings.Contains(args[0], ".") {
-			pkg, name = split(args[0])
-		} else {
-			name = args[0]
+			// Also search name in source file
+			pkg = name
+		} else if !regexpFlag && strings.Contains(name, ".") {
+			pkg, name = split(name)
 		}
 	case 2:
 		if packageFlag {
@@ -170,12 +168,14 @@ func runDoc(cmd *command.Command, args []string) error {
 		os.Exit(2)
 	}
 
-	useRegexp := matchCaseFlag || (regexpFlag && regexp.QuoteMeta(name) != name)
+	useRegexp := !matchCaseFlag || (regexpFlag && regexp.QuoteMeta(name) != name)
 	if useRegexp {
-		if matchCaseFlag && !regexpFlag {
+		if !(matchCaseFlag || regexpFlag) {
 			name = regexp.QuoteMeta(name)
 		}
 		identRegexp = regexp.MustCompile("^(?i:" + name + ")$")
+	} else {
+		identRaw = append([]byte{}, name...)
 	}
 
 	paths := Paths(pkg)
@@ -184,6 +184,8 @@ func runDoc(cmd *command.Command, args []string) error {
 }
 
 var identRegexp *regexp.Regexp = nil
+var identRaw []byte = nil
+
 var slash = string(filepath.Separator)
 var slashDot = string(filepath.Separator) + "."
 var goRootSrcPkg = filepath.Join(runtime.GOROOT(), "src", "pkg")
@@ -243,13 +245,13 @@ func searchDocsInPaths(name string, paths []string) {
 	var wg sync.WaitGroup
 	for _, path := range paths {
 		wg.Add(1)
-		go lookInDirectory(path, name, wg)
+		go lookInDirectory(path, name, &wg)
 	}
 	wg.Wait()
 }
 
 // lookInDirectory looks in the package (if any) in the directory for the named exported identifier.
-func lookInDirectory(directory, name string, wg sync.WaitGroup) {
+func lookInDirectory(directory, name string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	fd, err := os.Open(directory)
@@ -262,7 +264,7 @@ func lookInDirectory(directory, name string, wg sync.WaitGroup) {
 	if err != nil {
 		return
 	}
-	rawName := append([]byte{}, name...)
+
 	pkgs := map[string]*ast.Package{}
 	fset := token.NewFileSet()
 
@@ -276,7 +278,7 @@ func lookInDirectory(directory, name string, wg sync.WaitGroup) {
 		}
 		path := filepath.Join(directory, fileName)
 		fileWaiter.Add(1)
-		go checkFile(pkgs, fset, path, rawName, fileWaiter)
+		go checkFile(pkgs, fset, path, &fileWaiter)
 	}
 	fileWaiter.Wait()
 
@@ -285,7 +287,7 @@ func lookInDirectory(directory, name string, wg sync.WaitGroup) {
 	}
 }
 
-func checkFile(pkgs map[string]*ast.Package, fset *token.FileSet, path string, name []byte, wg sync.WaitGroup) {
+func checkFile(pkgs map[string]*ast.Package, fset *token.FileSet, path string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	data, err := ioutil.ReadFile(path)
@@ -296,7 +298,7 @@ func checkFile(pkgs map[string]*ast.Package, fset *token.FileSet, path string, n
 		if identRegexp.Match(data) {
 			return
 		}
-	} else if bytes.Contains(data, name) {
+	} else if !bytes.Contains(data, identRaw) {
 		return
 	}
 
@@ -361,9 +363,11 @@ func doPackage(pkg *ast.Package, fset *token.FileSet, ident string) {
 			name:       name,
 			ident:      ident,
 			lowerIdent: strings.ToLower(ident),
-			regexp:     identRegexp,
 			file:       astFile,
 			comments:   ast.NewCommentMap(fset, astFile, astFile.Comments),
+		}
+		if regexpFlag {
+			file.regexp = identRegexp
 		}
 
 		switch {
