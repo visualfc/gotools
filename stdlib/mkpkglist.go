@@ -20,6 +20,7 @@ compress/zlib
 container/heap
 container/list
 container/ring
+context
 crypto
 crypto/aes
 crypto/cipher
@@ -69,8 +70,6 @@ go/constant
 go/doc
 go/format
 go/importer
-go/internal/gccgoimporter
-go/internal/gcimporter
 go/parser
 go/printer
 go/scanner
@@ -88,16 +87,9 @@ image/color
 image/color/palette
 image/draw
 image/gif
-image/internal/imageutil
 image/jpeg
 image/png
 index/suffixarray
-internal/format
-internal/singleflight
-internal/syscall/windows
-internal/syscall/windows/registry
-internal/testenv
-internal/trace
 io
 io/ioutil
 log
@@ -115,10 +107,9 @@ net/http/cgi
 net/http/cookiejar
 net/http/fcgi
 net/http/httptest
+net/http/httptrace
 net/http/httputil
-net/http/internal
 net/http/pprof
-net/internal/socktest
 net/mail
 net/rpc
 net/rpc/jsonrpc

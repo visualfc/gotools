@@ -23,7 +23,6 @@ import (
 
 	"github.com/visualfc/gotools/pkgutil"
 	"github.com/visualfc/gotools/stdlib"
-	"golang.org/x/tools/go/buildutil"
 )
 
 var (
@@ -293,6 +292,26 @@ func (w *PkgWalker) FindDeclForPos(p token.Pos) (*ast.File, ast.Decl) {
 		return nil, nil
 	}
 	return f, findDecl(w.FileSet, f, p)
+}
+
+func (w *PkgWalker) FindImportName(ast *ast.File, path string) string {
+	for _, im := range ast.Imports {
+		if im.Path.Value == path {
+			if im.Name != nil {
+				return im.Name.Name
+			}
+			return path
+		}
+	}
+	return ""
+}
+
+func (w *PkgWalker) FindImportEndPos(ast *ast.File) token.Pos {
+	size := len(ast.Imports)
+	if size == 0 {
+		return token.NoPos
+	}
+	return ast.Imports[size-1].End()
 }
 
 func contains(list []string, s string) bool {
@@ -1120,7 +1139,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 		cursorPkgPath = pkgutil.VendorPathToImportPath(cursorPkgPath)
 	}
 
-	buildutil.ForEachPackage(&build.Default, func(importPath string, err error) {
+	ForEachPackage(&build.Default, func(importPath string, err error) {
 		if err != nil {
 			return
 		}
