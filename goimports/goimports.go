@@ -75,8 +75,6 @@ func runGoimports(cmd *command.Command, args []string) error {
 
 	if goimportsTabWidth < 0 {
 		fmt.Fprintf(os.Stderr, "negative tabwidth %d\n", goimportsTabWidth)
-		exitCode = 2
-		os.Exit(exitCode)
 		return os.ErrInvalid
 	}
 
@@ -106,7 +104,6 @@ func runGoimports(cmd *command.Command, args []string) error {
 			}
 		}
 	}
-	os.Exit(exitCode)
 	return nil
 }
 
