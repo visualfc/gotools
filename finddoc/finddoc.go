@@ -15,7 +15,7 @@
 //	doc pkg.name   # "doc io.Writer"
 //	doc pkg name   # "doc fmt Printf"
 //	doc name       # "doc isupper" (finds unicode.IsUpper)
-//	doc -pkg pkg   # "doc fmt"
+//	doc -pkg pkg   # "doc -pkg fmt"
 //
 // The pkg is the last element of the package path;
 // no slashes (ast.Node not go/ast.Node).
@@ -36,12 +36,14 @@ import (
 	"go/printer"
 	"go/token"
 	"go/types"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/visualfc/gotools/command"
 )
@@ -51,7 +53,7 @@ usage:
 	doc pkg.name   # "doc io.Writer"
 	doc pkg name   # "doc fmt Printf"
 	doc name       # "doc isupper" finds unicode.IsUpper
-	doc -pkg pkg   # "doc fmt"
+	doc -pkg pkg   # "doc -pkg fmt"
 	doc -r expr    # "doc -r '.*exported'"
 pkg is the last component of any package, e.g. fmt, parser
 name is the name of an exported symbol; case is ignored in matches.
@@ -145,14 +147,12 @@ func runDoc(cmd *command.Command, args []string) error {
 	var pkg, name string
 	switch len(args) {
 	case 1:
+		name = args[0]
 		if packageFlag {
-			pkg = args[0]
-		} else if regexpFlag {
-			name = args[0]
-		} else if strings.Contains(args[0], ".") {
-			pkg, name = split(args[0])
-		} else {
-			name = args[0]
+			// Also search name in source file
+			pkg = name
+		} else if !regexpFlag && strings.Contains(name, ".") {
+			pkg, name = split(name)
 		}
 	case 2:
 		if packageFlag {
@@ -167,11 +167,24 @@ func runDoc(cmd *command.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "doc: package name cannot contain slash (TODO)\n")
 		os.Exit(2)
 	}
-	for _, path := range Paths(pkg) {
-		lookInDirectory(path, name)
+
+	useRegexp := !matchCaseFlag || (regexpFlag && regexp.QuoteMeta(name) != name)
+	if useRegexp {
+		if !(matchCaseFlag || regexpFlag) {
+			name = regexp.QuoteMeta(name)
+		}
+		identRegexp = regexp.MustCompile("^(?i:" + name + ")$")
+	} else {
+		identRaw = append([]byte{}, name...)
 	}
+
+	paths := Paths(pkg)
+	searchDocsInPaths(name, paths)
 	return nil
 }
+
+var identRegexp *regexp.Regexp = nil
+var identRaw []byte = nil
 
 var slash = string(filepath.Separator)
 var slashDot = string(filepath.Separator) + "."
@@ -184,20 +197,20 @@ func split(arg string) (pkg, name string) {
 	return arg[0:dot], arg[dot+1:]
 }
 
-func Paths(pkg string) []string {
-	pkgs := pathsFor(runtime.GOROOT(), pkg)
-	for _, root := range goPaths {
-		pkgs = append(pkgs, pathsFor(root, pkg)...)
-	}
-	return pkgs
-}
-
 func SplitGopath() []string {
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		return nil
 	}
 	return strings.Split(gopath, string(os.PathListSeparator))
+}
+
+func Paths(pkg string) []string {
+	pkgs := pathsFor(runtime.GOROOT(), pkg)
+	for _, root := range goPaths {
+		pkgs = append(pkgs, pathsFor(root, pkg)...)
+	}
+	return pkgs
 }
 
 // pathsFor recursively walks the tree looking for possible directories for the package:
@@ -228,16 +241,84 @@ func pathsFor(root, pkg string) []string {
 	return pkgPaths
 }
 
+func searchDocsInPaths(name string, paths []string) {
+	var wg sync.WaitGroup
+	for _, path := range paths {
+		wg.Add(1)
+		go lookInDirectory(path, name, &wg)
+	}
+	wg.Wait()
+}
+
 // lookInDirectory looks in the package (if any) in the directory for the named exported identifier.
-func lookInDirectory(directory, name string) {
+func lookInDirectory(directory, name string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	fd, err := os.Open(directory)
+	if err != nil {
+		return
+	}
+	defer fd.Close()
+
+	dirnames, err := fd.Readdirnames(-1)
+	if err != nil {
+		return
+	}
+
+	pkgs := map[string]*ast.Package{}
 	fset := token.NewFileSet()
-	pkgs, _ := parser.ParseDir(fset, directory, nil, parser.ParseComments) // Ignore the error.
-	for _, pkg := range pkgs {
-		if pkg.Name == "main" || strings.HasSuffix(pkg.Name, "_test") {
+
+	var fileWaiter sync.WaitGroup
+	for _, fileName := range dirnames {
+		if !strings.HasSuffix(fileName, ".go") {
 			continue
 		}
+		if strings.HasSuffix(fileName, "_test.go") {
+			continue
+		}
+		path := filepath.Join(directory, fileName)
+		fileWaiter.Add(1)
+		go checkFile(pkgs, fset, path, &fileWaiter)
+	}
+	fileWaiter.Wait()
+
+	for _, pkg := range pkgs {
 		doPackage(pkg, fset, name)
 	}
+}
+
+func checkFile(pkgs map[string]*ast.Package, fset *token.FileSet, path string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return
+	}
+	if identRegexp != nil {
+		if identRegexp.Match(data) {
+			return
+		}
+	} else if !bytes.Contains(data, identRaw) {
+		return
+	}
+
+	src, _ := parser.ParseFile(fset, path, data, parser.ParseComments)
+	if src == nil {
+		return
+	}
+	pkgName := src.Name.Name
+	if pkgName == "main" || strings.HasSuffix(pkgName, "_test") {
+		return
+	}
+	pkg, found := pkgs[pkgName]
+	if !found {
+		pkg = &ast.Package{
+			Name:  pkgName,
+			Files: make(map[string]*ast.File),
+		}
+		pkgs[pkgName] = pkg
+	}
+	pkg.Files[path] = src
 }
 
 // prefixDirectory places the directory name on the beginning of each name in the list.
@@ -272,6 +353,7 @@ type File struct {
 func doPackage(pkg *ast.Package, fset *token.FileSet, ident string) {
 	var files []*File
 	found := false
+
 	for name, astFile := range pkg.Files {
 		if packageFlag && astFile.Doc == nil {
 			continue
@@ -284,15 +366,10 @@ func doPackage(pkg *ast.Package, fset *token.FileSet, ident string) {
 			file:       astFile,
 			comments:   ast.NewCommentMap(fset, astFile, astFile.Comments),
 		}
-		if regexpFlag && regexp.QuoteMeta(ident) != ident {
-			// It's a regular expression.
-			var err error
-			file.regexp, err = regexp.Compile("^(?i:" + ident + ")$")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "regular expression `%s`:", err)
-				os.Exit(2)
-			}
+		if regexpFlag {
+			file.regexp = identRegexp
 		}
+
 		switch {
 		case strings.HasPrefix(name, goRootSrcPkg):
 			file.urlPrefix = "http://golang.org/pkg"
@@ -351,8 +428,6 @@ func doPackage(pkg *ast.Package, fset *token.FileSet, ident string) {
 	// We need to search all files for methods, so record the full list in each file.
 	for _, file := range files {
 		file.allFiles = files
-	}
-	for _, file := range files {
 		file.doPrint = true
 		file.defs = info.Defs
 		if packageFlag {
@@ -368,6 +443,7 @@ func (f *File) Visit(node ast.Node) ast.Visitor {
 	switch n := node.(type) {
 	case *ast.GenDecl:
 		// Variables, constants, types.
+
 		for _, spec := range n.Specs {
 			switch spec := spec.(type) {
 			case *ast.ValueSpec:
