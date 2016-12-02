@@ -15,19 +15,36 @@ import (
 )
 
 var Command = &command.Command{
-	Run:       runGotest,
-	UsageLine: "gotest -f filename",
-	Short:     "go test go filename",
-	Long:      `go test go filename`,
+	Run:         runGotest,
+	UsageLine:   "gotest -f filename [build/test flags]",
+	Short:       "go test go filename",
+	Long:        `go test go filename`,
+	CustomFlags: true,
 }
 
 var testFileName string
+var testFileArgs string
 
-func init() {
-	Command.Flag.StringVar(&testFileName, "f", "", "test go filename")
-}
+//func init() {
+//	Command.Flag.StringVar(&testFileName, "f", "", "test go filename")
+//}
 
 func runGotest(cmd *command.Command, args []string) error {
+	index := -1
+	for n, arg := range args {
+		if arg == "-f" {
+			index = n
+			break
+		}
+	}
+	if index >= 0 && index < len(args) {
+		testFileName = args[index+1]
+		var r []string
+		r = append(r, args[0:index]...)
+		r = append(r, args[index+2:]...)
+		args = r
+	}
+
 	if testFileName == "" {
 		cmd.Usage()
 		return os.ErrInvalid
@@ -67,7 +84,9 @@ func runGotest(cmd *command.Command, args []string) error {
 
 	var testArgs []string
 	testArgs = append(testArgs, "test")
-	testArgs = append(testArgs, "-v")
+	if len(args) > 0 {
+		testArgs = append(testArgs, args...)
+	}
 	testArgs = append(testArgs, testFiles...)
 
 	command := exec.Command(gobin, testArgs...)
