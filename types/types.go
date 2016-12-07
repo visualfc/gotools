@@ -302,7 +302,7 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 			name = filepath.Join(parentDir, name)
 		} else if pkgutil.IsVendorExperiment() {
 			parentPkg := pkgutil.ImportDir(parentDir)
-			name, _ = pkgutil.VendoredImportPath(parentPkg, name)
+			name = pkgutil.VendoredImportPath(parentPkg, name)
 		}
 	}
 

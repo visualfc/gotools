@@ -2,16 +2,18 @@ package pkgutil
 
 import (
 	"go/build"
+	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 )
 
-var go15VendorExperiment = os.Getenv("GO15VENDOREXPERIMENT") == "1"
+//var go15VendorExperiment = os.Getenv("GO15VENDOREXPERIMENT") == "1"
 
 func IsVendorExperiment() bool {
-	return go15VendorExperiment
+	return true
 }
 
 // matchPattern(pattern)(name) reports whether
@@ -116,23 +118,36 @@ func ImportDir(dir string) *Package {
 	return &Package{pkg.Root, pkg.Dir, pkg.ImportPath}
 }
 
+// expandPath returns the symlink-expanded form of path.
+func expandPath(p string) string {
+	x, err := filepath.EvalSymlinks(p)
+	if err == nil {
+		return x
+	}
+	return p
+}
+
 // vendoredImportPath returns the expansion of path when it appears in parent.
 // If parent is x/y/z, then path might expand to x/y/z/vendor/path, x/y/vendor/path,
-// x/vendor/path, vendor/path, or else stay x/y/z if none of those exist.
+// x/vendor/path, vendor/path, or else stay path if none of those exist.
 // vendoredImportPath returns the expanded path or, if no expansion is found, the original.
-// If no expansion is found, vendoredImportPath also returns a list of vendor directories
-// it searched along the way, to help prepare a useful error message should path turn
-// out not to exist.
-func VendoredImportPath(parent *Package, path string) (found string, searched []string) {
-	if parent == nil || parent.Root == "" || !go15VendorExperiment {
-		return path, nil
+func VendoredImportPath(parent *Package, path string) (found string) {
+	if parent == nil || parent.Root == "" {
+		return path
 	}
+
 	dir := filepath.Clean(parent.Dir)
 	root := filepath.Join(parent.Root, "src")
-	if !hasFilePathPrefix(dir, root) || len(dir) <= len(root) || dir[len(root)] != filepath.Separator {
-		//log.Fatalf("invalid vendoredImportPath: dir=%q root=%q separator=%q", dir, root, string(filepath.Separator))
-		return path, nil
+	if !hasFilePathPrefix(dir, root) {
+		// Look for symlinks before reporting error.
+		dir = expandPath(dir)
+		root = expandPath(root)
 	}
+	if !hasFilePathPrefix(dir, root) || len(dir) <= len(root) || dir[len(root)] != filepath.Separator {
+		log.Println("invalid vendoredImportPath: dir=%q root=%q separator=%q", dir, root, string(filepath.Separator))
+		return ""
+	}
+
 	vpath := "vendor/" + path
 	for i := len(dir); i >= len(root); i-- {
 		if i < len(dir) && dir[i] != filepath.Separator {
@@ -146,7 +161,13 @@ func VendoredImportPath(parent *Package, path string) (found string, searched []
 			continue
 		}
 		targ := filepath.Join(dir[:i], vpath)
-		if isDir(targ) {
+		if isDir(targ) && hasGoFiles(targ) {
+			importPath := parent.ImportPath
+			if importPath == "command-line-arguments" {
+				// If parent.ImportPath is 'command-line-arguments'.
+				// set to relative directory to root (also chopped root directory)
+				importPath = dir[len(root)+1:]
+			}
 			// We started with parent's dir c:\gopath\src\foo\bar\baz\quux\xyzzy.
 			// We know the import path for parent's dir.
 			// We chopped off some number of path elements and
@@ -156,24 +177,36 @@ func VendoredImportPath(parent *Package, path string) (found string, searched []
 			// (actually the same number of bytes) from parent's import path
 			// and then append /vendor/path.
 			chopped := len(dir) - i
-			if chopped == len(parent.ImportPath)+1 {
+			if chopped == len(importPath)+1 {
 				// We walked up from c:\gopath\src\foo\bar
 				// and found c:\gopath\src\vendor\path.
 				// We chopped \foo\bar (length 8) but the import path is "foo/bar" (length 7).
 				// Use "vendor/path" without any prefix.
-				return vpath, nil
+				return vpath
 			}
-			return parent.ImportPath[:len(parent.ImportPath)-chopped] + "/" + vpath, nil
+			return importPath[:len(importPath)-chopped] + "/" + vpath
 		}
-		// Note the existence of a vendor directory in case path is not found anywhere.
-		searched = append(searched, targ)
 	}
-	return path, searched
+	return path
+}
+
+// hasGoFiles reports whether dir contains any files with names ending in .go.
+// For a vendor check we must exclude directories that contain no .go files.
+// Otherwise it is not possible to vendor just a/b/c and still import the
+// non-vendored a/b. See golang.org/issue/13832.
+func hasGoFiles(dir string) bool {
+	fis, _ := ioutil.ReadDir(dir)
+	for _, fi := range fis {
+		if !fi.IsDir() && strings.HasSuffix(fi.Name(), ".go") {
+			return true
+		}
+	}
+	return false
 }
 
 // findVendor looks for the last non-terminating "vendor" path element in the given import path.
 // If there isn't one, findVendor returns ok=false.
-// Otherwise, findInternal returns ok=true and the index of the "vendor".
+// Otherwise, findVendor returns ok=true and the index of the "vendor".
 //
 // Note that terminating "vendor" elements don't count: "x/vendor" is its own package,
 // not the vendored copy of an import "" (the empty import path).
