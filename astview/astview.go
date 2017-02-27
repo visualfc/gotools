@@ -28,9 +28,11 @@ var Command = &command.Command{
 }
 
 var astViewStdin bool
+var astViewShowEndPos bool
 
 func init() {
 	Command.Flag.BoolVar(&astViewStdin, "stdin", false, "input from stdin")
+	Command.Flag.BoolVar(&astViewShowEndPos, "end", false, "show decl end pos")
 }
 
 func runAstView(cmd *command.Command, args []string) error {
@@ -100,8 +102,11 @@ func (p *PackageView) posFileIndex(pos token.Position) int {
 	return index
 }
 
-func (p *PackageView) posText(pos token.Position) (s string) {
+func (p *PackageView) posText(pos token.Position, end token.Position) (s string) {
 	index := p.posFileIndex(pos)
+	if astViewShowEndPos {
+		return fmt.Sprintf("%d:%d:%d:%d:%d", index, pos.Line, pos.Column, end.Line, end.Column)
+	}
 	return fmt.Sprintf("%d:%d:%d", index, pos.Line, pos.Column)
 }
 
@@ -201,10 +206,11 @@ func NewFilePackageSource(filename string, f *os.File, expr bool) (*PackageView,
 func (p *PackageView) printFuncsHelper(w io.Writer, funcs []*FuncDoc, level int, tag string, tag_folder string) {
 	for _, f := range funcs {
 		pos := p.fset.Position(f.Decl.Pos())
+		end := p.fset.Position(f.Decl.End())
 		if p.expr {
-			fmt.Fprintf(w, "%d,%s,%s,%s@%s\n", level, tag, f.Name, p.posText(pos), types.ExprString(f.Decl.Type))
+			fmt.Fprintf(w, "%d,%s,%s,%s@%s\n", level, tag, f.Name, p.posText(pos, end), types.ExprString(f.Decl.Type))
 		} else {
-			fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag, f.Name, p.posText(pos))
+			fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag, f.Name, p.posText(pos, end))
 		}
 	}
 }
@@ -225,11 +231,12 @@ func (p *PackageView) PrintVars(w io.Writer, vars []*ValueDoc, level int, tag st
 		for _, s := range v.Decl.Specs {
 			if m, ok := s.(*ast.ValueSpec); ok {
 				pos := p.fset.Position(m.Pos())
+				end := p.fset.Position(m.End())
 				for i := 0; i < len(m.Names); i++ {
 					if p.expr && m.Type != nil {
-						fmt.Fprintf(w, "%d,%s,%s,%s@%s\n", level, tag, m.Names[i], p.posText(pos), types.ExprString(m.Type))
+						fmt.Fprintf(w, "%d,%s,%s,%s@%s\n", level, tag, m.Names[i], p.posText(pos, end), types.ExprString(m.Type))
 					} else {
-						fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag, m.Names[i], p.posText(pos))
+						fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag, m.Names[i], p.posText(pos, end))
 					}
 				}
 			}
@@ -249,7 +256,8 @@ func (p *PackageView) PrintTypes(w io.Writer, types []*TypeDoc, level int) {
 			tag = tag_struct
 		}
 		pos := p.fset.Position(d.Decl.Pos())
-		fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag, d.Type.Name, p.posText(pos))
+		end := p.fset.Position(d.Decl.End())
+		fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag, d.Type.Name, p.posText(pos, end))
 		p.printFuncsHelper(w, d.Funcs, level+1, tag_type_factor, "")
 		p.printFuncsHelper(w, d.Methods, level+1, tag_type_method, "")
 		p.PrintTypeFields(w, d.Decl, level+1)
@@ -271,10 +279,11 @@ func (p *PackageView) PrintTypeFields(w io.Writer, decl *ast.GenDecl, level int)
 			}
 			for _, m := range list.Names {
 				pos := p.fset.Position(m.Pos())
+				end := p.fset.Position(m.End())
 				if list.Type != nil {
-					fmt.Fprintf(w, "%d,%s,%s,%s@%s\n", level, tag_type_value, m.Name, p.posText(pos), types.ExprString(list.Type))
+					fmt.Fprintf(w, "%d,%s,%s,%s@%s\n", level, tag_type_value, m.Name, p.posText(pos, end), types.ExprString(list.Type))
 				} else {
-					fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag_type_value, m.Name, p.posText(pos))
+					fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag_type_value, m.Name, p.posText(pos, end))
 				}
 			}
 		}
@@ -285,7 +294,8 @@ func (p *PackageView) PrintTypeFields(w io.Writer, decl *ast.GenDecl, level int)
 			}
 			for _, m := range list.Names {
 				pos := p.fset.Position(m.Pos())
-				fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag_type_method, m.Name, p.posText(pos))
+				end := p.fset.Position(m.End())
+				fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag_type_method, m.Name, p.posText(pos, end))
 			}
 		}
 	}
@@ -320,7 +330,8 @@ func (p *PackageView) PrintImports(w io.Writer, level int, tag, tag_folder strin
 			for _, v := range file.Imports {
 				if v.Path.Value == vname {
 					pos := p.fset.Position(v.Pos())
-					ps = append(ps, p.posText(pos))
+					end := p.fset.Position(v.End())
+					ps = append(ps, p.posText(pos, end))
 				}
 			}
 		}
