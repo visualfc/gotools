@@ -1,6 +1,3 @@
-[submodule "vendor/github.com/pmezard/go-difflib"]
-	path = vendor/github.com/pmezard/go-difflib
-	url = https://github.com/pmezard/go-difflib
-[submodule "vendor/golang.org/x/tools"]
-	path = vendor/golang.org/x/tools
+[submodule "vendor/github.com/golang/x/tools"]
+	path = vendor/github.com/golang/x/tools
 	url = https://github.com/golang/tools
