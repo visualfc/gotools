@@ -12,7 +12,7 @@ import (
 	"runtime"
 
 	"github.com/visualfc/gotools/command"
-	"golang.org/x/tools/oracle"
+	"github.com/visualfc/gotools/oracle/oracle"
 )
 
 //The mode argument determines the query to perform:
