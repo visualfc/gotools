@@ -705,10 +705,11 @@ func IsSameObject(a, b types.Object) bool {
 	if apath != bpath {
 		return false
 	}
-	if a.Id() != b.Id() {
-		return false
-	}
-	return a.String() == b.String()
+	return a.Id() == b.Id()
+	//	if a.Id() != b.Id() {
+	//		return false
+	//	}
+	//	return a.String() == b.String()
 }
 
 func orgType(typ types.Type) types.Type {
@@ -805,6 +806,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 	//	}
 	cursorIsInterfaceMethod := false
 	var cursorInterfaceTypeName string
+	var cursorInterfaceTypeNamed *types.Named
 
 	if kind == ObjMethod && cursorSelection != nil && cursorSelection.Recv() != nil {
 		sig := cursorObj.(*types.Func).Type().Underlying().(*types.Signature)
@@ -819,6 +821,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 					cursorInterfaceTypeName = typ.Obj().Name()
 				}
 				cursorIsInterfaceMethod = true
+				cursorInterfaceTypeNamed = named
 			}
 		}
 	} else if kind == ObjField && cursorSelection != nil {
@@ -835,6 +838,9 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 			}
 		}
 	}
+	if typesVerbose {
+		log.Println("parser", cursorObj, kind, cursorIsInterfaceMethod)
+	}
 	if cursorPkg != nil && cursorPkg != pkg &&
 		kind != ObjPkgName && w.isBinaryPkg(cursorPkg.Path()) {
 		conf := &PkgConfig{
@@ -848,23 +854,41 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 		pkg, _ := w.Import("", cursorPkg.Path(), conf)
 		if pkg != nil {
 			if cursorIsInterfaceMethod {
-				for _, obj := range conf.Info.Defs {
-					if obj == nil {
-						continue
-					}
-					if fn, ok := obj.(*types.Func); ok {
-						if fn.Name() == cursorObj.Name() {
-							if sig, ok := fn.Type().Underlying().(*types.Signature); ok {
-								if named, ok := sig.Recv().Type().(*types.Named); ok {
-									if named.Obj() != nil && named.Obj().Name() == cursorInterfaceTypeName {
-										cursorPos = obj.Pos()
-										break
-									}
-								}
-							}
+				for k, v := range conf.Info.Defs {
+					if k != nil && v != nil && IsSameObject(v, cursorInterfaceTypeNamed.Obj()) {
+						named := v.Type().(*types.Named)
+						obj, typ := w.lookupNamedMethod(named, cursorObj.Name())
+						if obj != nil {
+							cursorObj = obj
+							cursorPos = obj.Pos()
 						}
+						if obj != nil {
+							cursorObj = obj
+						}
+						if typ != nil {
+							cursorPkg = typ.Obj().Pkg()
+							cursorInterfaceTypeName = typ.Obj().Name()
+						}
+						break
 					}
 				}
+				//				for _, obj := range conf.Info.Defs {
+				//					if obj == nil {
+				//						continue
+				//					}
+				//					if fn, ok := obj.(*types.Func); ok {
+				//						if fn.Name() == cursorObj.Name() {
+				//							if sig, ok := fn.Type().Underlying().(*types.Signature); ok {
+				//								if named, ok := sig.Recv().Type().(*types.Named); ok {
+				//									if named.Obj() != nil && named.Obj().Name() == cursorInterfaceTypeName {
+				//										cursorPos = obj.Pos()
+				//										break
+				//									}
+				//								}
+				//							}
+				//						}
+				//					}
+				//				}
 			} else if kind == ObjField && fieldTypeObj != nil {
 				for _, obj := range conf.Info.Defs {
 					if obj == nil {
