@@ -705,11 +705,18 @@ func IsSameObject(a, b types.Object) bool {
 	if apath != bpath {
 		return false
 	}
-	return a.Id() == b.Id()
-	//	if a.Id() != b.Id() {
-	//		return false
-	//	}
-	//	return a.String() == b.String()
+	if a.Id() != b.Id() {
+		return false
+	}
+	if a.Type().String() != b.Type().String() {
+		return false
+	}
+	t1, ok1 := a.(*types.TypeName)
+	t2, ok2 := b.(*types.TypeName)
+	if ok1 && ok2 {
+		return t1.Type().String() == t2.Type().String()
+	}
+	return a.String() == b.String()
 }
 
 func orgType(typ types.Type) types.Type {
