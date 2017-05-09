@@ -18,6 +18,7 @@ import (
 	"github.com/visualfc/gotools/oracle"
 	"github.com/visualfc/gotools/pkgs"
 	"github.com/visualfc/gotools/runcmd"
+	"github.com/visualfc/gotools/terminal"
 	"github.com/visualfc/gotools/types"
 )
 
@@ -35,6 +36,7 @@ func init() {
 	command.Register(gofmt.Command)
 	command.Register(gotest.Command)
 	command.Register(finddecl.Command)
+	command.Register(terminal.Command)
 }
 
 func main() {
