@@ -10,10 +10,8 @@ import (
 	"github.com/kr/pty"
 )
 
-func ExecuteShell(workPath string) error {
-	c := exec.Command("/bin/sh", "-l", "-i")
-	c.Dir = workPath
-	return Execute(c)
+func GetShell() (cmd string, args []string) {
+	return "/bin/sh", []string{"-l", "-i"}
 }
 
 func Execute(c *exec.Cmd) error {

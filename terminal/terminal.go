@@ -4,6 +4,7 @@
 package terminal
 
 import (
+	"os"
 	"os/exec"
 
 	"github.com/visualfc/gotools/command"
@@ -18,15 +19,21 @@ var Command = &command.Command{
 }
 
 func runTerminal(cmd *command.Command, args []string) (err error) {
+	var c *exec.Cmd
 	if len(args) >= 2 {
 		var carg []string
 		if len(args) >= 2 {
 			carg = append(carg, args[1:]...)
 		}
-		c := exec.Command(args[0], carg...)
-		err = Execute(c)
+		c = exec.Command(args[0], carg...)
 	} else {
-		err = ExecuteShell("")
+		shellCmd, shellArgs := GetShell()
+		c = exec.Command(shellCmd, shellArgs...)
 	}
+	if c == nil {
+		return os.ErrInvalid
+	}
+	err = Execute(c)
+
 	return
 }
