@@ -183,6 +183,7 @@ func runTypes(cmd *command.Command, args []string) error {
 		}
 		cursor = &cursorInfo
 	}
+	w.cursor = cursor
 	for _, pkgName := range args {
 		if pkgName == "." {
 			pkgPath, err := os.Getwd()
@@ -193,6 +194,7 @@ func runTypes(cmd *command.Command, args []string) error {
 		}
 		conf := &PkgConfig{IgnoreFuncBodies: true, AllowBinary: true, WithTestFiles: true}
 		if cursor != nil {
+			cursor.pkgName = pkgName
 			conf.Cursor = cursor
 			conf.IgnoreFuncBodies = false
 			conf.Info = &types.Info{
@@ -221,7 +223,7 @@ func runTypes(cmd *command.Command, args []string) error {
 }
 
 type FileCursor struct {
-	pkg       string
+	pkgName   string
 	fileName  string
 	fileDir   string
 	cursorPos int
@@ -263,6 +265,7 @@ type PkgWalker struct {
 	parsedFileCache map[string]*ast.File
 	imported        map[string]*types.Package // packages already imported
 	gcimported      types.Importer
+	cursor          *FileCursor
 	//importing       types.Package
 }
 
@@ -346,20 +349,50 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 	//		//log.Fatalf("pkg %q, dir %q: ScanDir: %v", name, info.Dir, err)
 	//	}
 
-	filenames := append(append([]string{}, bp.GoFiles...), bp.CgoFiles...)
+	GoFiles := append(append([]string{}, bp.GoFiles...), bp.CgoFiles...)
+	XTestFiles := append([]string{}, bp.XTestGoFiles...)
+
 	if conf.WithTestFiles {
-		filenames = append(filenames, bp.TestGoFiles...)
+		GoFiles = append(GoFiles, bp.TestGoFiles...)
 	}
 
 	if name == "runtime" {
 		n := fmt.Sprintf("zgoos_%s.go", w.context.GOOS)
-		if !contains(filenames, n) {
-			filenames = append(filenames, n)
+		if !contains(GoFiles, n) {
+			GoFiles = append(GoFiles, n)
 		}
 
 		n = fmt.Sprintf("zgoarch_%s.go", w.context.GOARCH)
-		if !contains(filenames, n) {
-			filenames = append(filenames, n)
+		if !contains(GoFiles, n) {
+			GoFiles = append(GoFiles, n)
+		}
+	}
+
+	if conf.Cursor != nil && conf.Cursor.fileName != "" {
+		cursor := conf.Cursor
+		f, _ := w.parseFileEx(bp.Dir, cursor.fileName, cursor.src, true)
+		if f != nil {
+			cursor.pos = token.Pos(w.fset.File(f.Pos()).Base()) + token.Pos(cursor.cursorPos)
+			cursor.fileDir = bp.Dir
+			isTest := strings.HasSuffix(cursor.fileName, "_test.go")
+			isXTest := false
+			if isTest && strings.HasSuffix(f.Name.Name, "_test") {
+				isXTest = true
+			}
+			cursor.xtest = isXTest
+			checkAppend := func(filenames []string, file string) []string {
+				for _, f := range filenames {
+					if f == file {
+						return filenames
+					}
+				}
+				return append(filenames, file)
+			}
+			if isXTest {
+				XTestFiles = checkAppend(XTestFiles, cursor.fileName)
+			} else {
+				GoFiles = checkAppend(GoFiles, cursor.fileName)
+			}
 		}
 	}
 
@@ -381,7 +414,7 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 		}
 		return
 	}
-	files := parserFiles(filenames, conf.Cursor, false)
+	files := parserFiles(GoFiles, conf.Cursor, false)
 	xfiles := parserFiles(bp.XTestGoFiles, conf.Cursor, true)
 
 	typesConf := types.Config{
@@ -435,6 +468,10 @@ func (im *Importer) Import(name string) (pkg *types.Package, err error) {
 }
 
 func (w *PkgWalker) parseFile(dir, file string, src interface{}) (*ast.File, error) {
+	return w.parseFileEx(dir, file, src, typesFindDoc)
+}
+
+func (w *PkgWalker) parseFileEx(dir, file string, src interface{}, findDoc bool) (*ast.File, error) {
 	filename := filepath.Join(dir, file)
 	f, _ := w.parsedFileCache[filename]
 	if f != nil {
@@ -462,7 +499,7 @@ func (w *PkgWalker) parseFile(dir, file string, src interface{}) (*ast.File, err
 
 	if f == nil {
 		flag := parser.AllErrors
-		if typesFindDoc {
+		if findDoc {
 			flag |= parser.ParseComments
 		}
 		f, err = parser.ParseFile(w.fset, filename, src, flag)
