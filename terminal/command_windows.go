@@ -17,18 +17,13 @@ func checkFiles(names ...string) string {
 	return ""
 }
 
-func ExecuteShell(workPath string) error {
+func GetShell() (cmd string, args []string) {
 	windir := os.Getenv("windir")
 	if windir == "" {
 		windir = "c:\\windows"
 	}
-	cmd := checkFiles(windir+"\\Sysnative\\cmd.exe", windir+"\\System32\\cmd.exe")
-	if cmd == "" {
-		return os.ErrNotExist
-	}
-	c := exec.Command(cmd)
-	c.Dir = workPath
-	return Execute(c)
+	cmd = checkFiles(windir+"\\Sysnative\\cmd.exe", windir+"\\System32\\cmd.exe")
+	return
 }
 
 func Execute(c *exec.Cmd) error {
