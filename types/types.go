@@ -47,6 +47,8 @@ var (
 	typesFindUseAll  bool
 	typesFindInfo    bool
 	typesFindDoc     bool
+	typesTags        string
+	typesTagList     = []string{} // exploded version of tags flag; set in main
 )
 
 //func init
@@ -60,6 +62,7 @@ func init() {
 	Command.Flag.BoolVar(&typesFindUse, "use", false, "find cursor usages")
 	Command.Flag.BoolVar(&typesFindUseAll, "all", false, "find cursor all usages in GOPATH")
 	Command.Flag.BoolVar(&typesFindDoc, "doc", false, "find cursor def doc")
+	Command.Flag.StringVar(&typesTags, "tags", "", "comma-separated list of build tags to apply when parsing")
 }
 
 type ObjKind int
@@ -164,7 +167,11 @@ func runTypes(cmd *command.Command, args []string) error {
 			log.Println("time", time.Now().Sub(now))
 		}()
 	}
-	w := NewPkgWalker(&build.Default)
+	typesTagList = strings.Split(typesTags, ",")
+	context := build.Default
+	context.BuildTags = append(typesTagList, context.BuildTags...)
+
+	w := NewPkgWalker(&context)
 	var cursor *FileCursor
 	if typesFilePos != "" {
 		var cursorInfo FileCursor
@@ -1109,7 +1116,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) {
 		cursorPkgPath = pkgutil.VendorPathToImportPath(cursorPkgPath)
 	}
 
-	buildutil.ForEachPackage(&build.Default, func(importPath string, err error) {
+	buildutil.ForEachPackage(w.context, func(importPath string, err error) {
 		if err != nil {
 			return
 		}
