@@ -62,7 +62,7 @@ func init() {
 	Command.Flag.BoolVar(&typesFindUse, "use", false, "find cursor usages")
 	Command.Flag.BoolVar(&typesFindUseAll, "all", false, "find cursor all usages in GOPATH")
 	Command.Flag.BoolVar(&typesFindDoc, "doc", false, "find cursor def doc")
-	Command.Flag.StringVar(&typesTags, "tags", "", "comma-separated list of build tags to apply when parsing")
+	Command.Flag.StringVar(&typesTags, "tags", "", "space-separated list of build tags to apply when parsing")
 }
 
 type ObjKind int
@@ -167,7 +167,7 @@ func runTypes(cmd *command.Command, args []string) error {
 			log.Println("time", time.Now().Sub(now))
 		}()
 	}
-	typesTagList = strings.Split(typesTags, ",")
+	typesTagList = strings.Split(typesTags, " ")
 	context := build.Default
 	context.BuildTags = append(typesTagList, context.BuildTags...)
 
