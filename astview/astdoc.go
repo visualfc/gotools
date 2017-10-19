@@ -6,11 +6,13 @@
 package astview
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 // ----------------------------------------------------------------------------
@@ -41,6 +43,7 @@ type docReader struct {
 	funcs   map[string]*ast.FuncDecl
 	imports map[string]int
 	bugs    []*ast.CommentGroup
+	todos   []*TodoDoc
 }
 
 func (doc *docReader) init(pkgName string, showAll bool) {
@@ -279,8 +282,10 @@ func copyCommentList(list []*ast.Comment) []*ast.Comment {
 }
 
 var (
-	bug_markers = regexp.MustCompile("^/[/*][ \t]*BUG\\(.*\\):[ \t]*") // BUG(uid):
-	bug_content = regexp.MustCompile("[^ \n\r\t]+")                    // at least one non-whitespace char
+	todoList     = "TODO,BUG,FIXME,NOTE,SECBUG"
+	bug_markers  = regexp.MustCompile("^/[/*][ \t]*BUG\\(.*\\):[ \t]*") // BUG(uid):
+	bug_content  = regexp.MustCompile("[^ \n\r\t]+")                    // at least one non-whitespace char
+	todo_markers = regexp.MustCompile(fmt.Sprintf("^/[/*][ \t](%s)[\\s\\:\\(\\,].*$", strings.Replace(todoList, ",", "|", -1)))
 )
 
 // addFile adds the AST for a source file to the docReader.
@@ -297,19 +302,21 @@ func (doc *docReader) addFile(src *ast.File) {
 	for _, decl := range src.Decls {
 		doc.addDecl(decl)
 	}
-
 	// collect BUG(...) comments
 	for _, c := range src.Comments {
 		text := c.List[0].Text
-		if m := bug_markers.FindStringIndex(text); m != nil {
-			// found a BUG comment; maybe empty
-			if btxt := text[m[1]:]; bug_content.MatchString(btxt) {
-				// non-empty BUG comment; collect comment without BUG prefix
-				list := copyCommentList(c.List)
-				list[0].Text = text[m[1]:]
-				doc.bugs = append(doc.bugs, &ast.CommentGroup{list})
-			}
+		if m := todo_markers.FindStringSubmatchIndex(text); m != nil {
+			doc.todos = append(doc.todos, &TodoDoc{text[m[2]:m[3]], text[m[2]:], c})
 		}
+		//		if m := bug_markers.FindStringIndex(text); m != nil {
+		//			// found a BUG comment; maybe empty
+		//			if btxt := text[m[1]:]; bug_content.MatchString(btxt) {
+		//				// non-empty BUG comment; collect comment without BUG prefix
+		//				list := copyCommentList(c.List)
+		//				list[0].Text = text[m[1]:]
+		//				doc.bugs = append(doc.bugs, &ast.CommentGroup{list})
+		//			}
+		//		}
 	}
 	src.Comments = nil // consumed unassociated comments - remove from ast.File node
 }
@@ -519,6 +526,12 @@ func makeBugDocs(list []*ast.CommentGroup) []string {
 	return d
 }
 
+type TodoDoc struct {
+	Tag      string
+	Text     string
+	Comments *ast.CommentGroup
+}
+
 // PackageDoc is the documentation for an entire package.
 //
 type PackageDoc struct {
@@ -532,6 +545,7 @@ type PackageDoc struct {
 	Vars        []*ValueDoc
 	Funcs       []*FuncDoc
 	Factorys    []*FuncDoc
+	Todos       []*TodoDoc
 	Bugs        []string
 }
 
@@ -553,6 +567,7 @@ func (doc *docReader) newDoc(importpath string, filenames []string) *PackageDoc 
 	p.Vars = makeValueDocs(doc.values, token.VAR)
 	p.Funcs = makeFuncDocs(doc.funcs)
 	p.Bugs = makeBugDocs(doc.bugs)
+	p.Todos = doc.todos
 
 	for _, d := range p.Types {
 		switch d.Type.Type.(type) {

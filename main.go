@@ -39,6 +39,7 @@ func init() {
 	command.Register(terminal.Command)
 }
 
+// TODO help
 func main() {
 	command.AppName = "gotools"
 	command.AppVersion = "1.9"

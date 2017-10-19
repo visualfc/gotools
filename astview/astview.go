@@ -29,10 +29,12 @@ var Command = &command.Command{
 
 var astViewStdin bool
 var astViewShowEndPos bool
+var astViewShowTodo bool
 
 func init() {
 	Command.Flag.BoolVar(&astViewStdin, "stdin", false, "input from stdin")
 	Command.Flag.BoolVar(&astViewShowEndPos, "end", false, "show decl end pos")
+	Command.Flag.BoolVar(&astViewShowTodo, "todo", false, "show todo list")
 }
 
 func runAstView(cmd *command.Command, args []string) error {
@@ -76,6 +78,8 @@ const (
 	tag_type_method    = "tm"
 	tag_type_factor    = "tf"
 	tag_type_value     = "tv"
+	tag_todo           = "b"
+	tag_todo_folder    = "+b"
 )
 
 type PackageView struct {
@@ -162,7 +166,11 @@ func ParseFiles(fset *token.FileSet, filenames []string, mode parser.Mode) (pkgs
 
 func PrintFilesTree(filenames []string, w io.Writer, expr bool) error {
 	fset := token.NewFileSet()
-	pkgs, pkgsfiles, err := ParseFiles(fset, filenames, parser.AllErrors)
+	mode := parser.AllErrors
+	if astViewShowTodo {
+		mode |= parser.ParseComments
+	}
+	pkgs, pkgsfiles, err := ParseFiles(fset, filenames, mode)
 	if err != nil {
 		return err
 	}
@@ -188,7 +196,11 @@ func NewFilePackageSource(filename string, f *os.File, expr bool) (*PackageView,
 	p := new(PackageView)
 	p.fset = token.NewFileSet()
 	p.expr = expr
-	file, err := parser.ParseFile(p.fset, filename, src, 0)
+	mode := parser.AllErrors
+	if astViewShowTodo {
+		mode |= parser.ParseComments
+	}
+	file, err := parser.ParseFile(p.fset, filename, src, mode)
 	if err != nil {
 		return nil, err
 	}
@@ -358,6 +370,27 @@ func (p *PackageView) PrintFuncs(w io.Writer, level int, tag_folder string) {
 	p.printFuncsHelper(w, p.pdoc.Funcs, level, tag_func, tag_func_folder)
 }
 
+func (p *PackageView) PrintTodos(w io.Writer, level int, tag, tag_folder string) {
+	hasFolder := false
+	if len(p.pdoc.Todos) > 0 {
+		hasFolder = true
+	}
+	if !hasFolder {
+		return
+	}
+	if len(tag_folder) > 0 {
+		fmt.Fprintf(w, "%d,%s,TodoList\n", level, tag_folder)
+		level++
+	}
+	for _, todo := range p.pdoc.Todos {
+		c := todo.Comments.List[0]
+		pos := p.fset.Position(c.Pos())
+		end := p.fset.Position(c.End())
+		ps := p.posText(pos, end)
+		fmt.Fprintf(w, "%d,%s,%s,%s@%s\n", level, tag, todo.Tag, ps, todo.Text)
+	}
+}
+
 func (p *PackageView) PrintPackage(w io.Writer, level int) {
 	p.PrintHeader(w, level)
 	level++
@@ -366,6 +399,7 @@ func (p *PackageView) PrintPackage(w io.Writer, level int) {
 	p.PrintVars(w, p.pdoc.Consts, level, tag_const, tag_const_folder)
 	p.PrintFuncs(w, level, tag_func_folder)
 	p.PrintTypes(w, p.pdoc.Types, level)
+	p.PrintTodos(w, level, tag_todo, tag_todo_folder)
 }
 
 // level,tag,pos@info
