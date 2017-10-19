@@ -15,8 +15,8 @@ import (
 	"io/ioutil"
 	"sort"
 
-	"golang.org/x/tools/go/loader"
 	"github.com/visualfc/gotools/oracle/oracle/serial"
+	"golang.org/x/tools/go/loader"
 	"golang.org/x/tools/refactor/importgraph"
 )
 

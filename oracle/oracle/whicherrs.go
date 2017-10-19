@@ -13,11 +13,11 @@ import (
 	"go/types"
 	"sort"
 
+	"github.com/visualfc/gotools/oracle/oracle/serial"
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/loader"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
-	"github.com/visualfc/gotools/oracle/oracle/serial"
 )
 
 var builtinErrorType = types.Universe.Lookup("error").Type()
