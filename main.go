@@ -1,4 +1,4 @@
-// Copyright 2011-2015 visualfc <visualfc@gmail.com>. All rights reserved.
+// Copyright 2011-2017 visualfc <visualfc@gmail.com>. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -41,7 +41,7 @@ func init() {
 
 func main() {
 	command.AppName = "gotools"
-	command.AppVersion = "1.0"
+	command.AppVersion = "1.9"
 	command.AppInfo = "Go tools for liteide."
 	command.Main()
 }
