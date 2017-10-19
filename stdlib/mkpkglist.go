@@ -96,6 +96,7 @@ log
 log/syslog
 math
 math/big
+math/bits
 math/cmplx
 math/rand
 mime
@@ -122,6 +123,7 @@ os/signal
 os/user
 path
 path/filepath
+plugin
 reflect
 regexp
 regexp/syntax
