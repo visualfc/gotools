@@ -12,6 +12,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/visualfc/gotools/command"
 )
@@ -22,7 +23,6 @@ var Command = &command.Command{
 	Short:     "golang finddecl util",
 	Long:      `golang finddecl util.`,
 }
-
 var (
 	filePath string
 	fileLine int
@@ -56,17 +56,73 @@ func runFindDecl(cmd *command.Command, args []string) error {
 		fmt.Println("-")
 		return errors.New("error find decl")
 	}
-	printDecl(fset, decl)
+	printDecl(fset, decl, fileLine)
 	return nil
 }
 
-func printDecl(fset *token.FileSet, decl ast.Decl) {
+type Info struct {
+	Type      string
+	Name      string
+	BeginLine int
+	EndLine   int
+}
+
+func printDecl(fset *token.FileSet, decl ast.Decl, line int) {
+	var tag string
+	var name string
+
+	tag = "-"
+	name = "-"
 	switch d := decl.(type) {
 	case *ast.GenDecl:
-		fmt.Println(d.Tok, fset.Position(d.Pos()).Line, fset.Position(d.End()).Line)
+		switch d.Tok {
+		case token.IMPORT:
+			tag = "import"
+			if len(d.Specs) > 0 {
+				if ts := d.Specs[0].(*ast.ImportSpec); ts != nil {
+					name, _ = strconv.Unquote(ts.Path.Value)
+				}
+			}
+		case token.TYPE:
+			tag = "type"
+			if len(d.Specs) > 0 {
+				if ts := d.Specs[0].(*ast.TypeSpec); ts != nil {
+					name = ts.Name.Name
+					switch ts.Type.(type) {
+					case *ast.StructType:
+						tag = "struct"
+					case *ast.InterfaceType:
+						tag = "interface"
+					default:
+						tag = "type"
+					}
+				}
+			}
+		case token.VAR, token.CONST:
+			tag = d.Tok.String()
+			var testName string
+			for _, ds := range d.Specs {
+				if ts := ds.(*ast.ValueSpec); ts != nil {
+					name = ts.Names[0].Name
+					for _, n := range ts.Names {
+						if line >= fset.Position(n.Pos()).Line && line <= fset.Position(n.End()).Line {
+							testName = n.Name
+							break
+						}
+					}
+				}
+			}
+			if testName != "" {
+				name = testName
+			}
+		default:
+			tag = d.Tok.String()
+		}
 	case *ast.FuncDecl:
-		fmt.Println("func", d.Name, fset.Position(d.Pos()).Line, fset.Position(d.End()).Line)
+		tag = "func"
+		name = d.Name.Name
 	}
+	fmt.Println(tag, name, fset.Position(decl.Pos()).Line, fset.Position(decl.End()).Line)
 }
 
 func findDecl(fset *token.FileSet, file *ast.File, line int) ast.Decl {
