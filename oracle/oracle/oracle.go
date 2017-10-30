@@ -33,6 +33,7 @@ import (
 
 	"github.com/visualfc/gotools/oracle/oracle/serial"
 	"golang.org/x/tools/go/ast/astutil"
+	"golang.org/x/tools/go/buildutil"
 	"golang.org/x/tools/go/loader"
 	"golang.org/x/tools/go/pointer"
 	"golang.org/x/tools/go/ssa"
@@ -140,20 +141,31 @@ func Run(q *Query) error {
 }
 
 func setPTAScope(lconf *loader.Config, scope []string) error {
-	if len(scope) == 0 {
+	pkgs := buildutil.ExpandPatterns(lconf.Build, scope)
+	if len(pkgs) == 0 {
 		return fmt.Errorf("no packages specified for pointer analysis scope")
 	}
-
-	// Determine initial packages for PTA.
-	args, err := lconf.FromArgs(scope, true)
-	if err != nil {
-		return err
-	}
-	if len(args) > 0 {
-		return fmt.Errorf("surplus arguments: %q", args)
-	}
+	// The value of each entry in pkgs is true,
+	// giving ImportWithTests (not Import) semantics.
+	lconf.ImportPkgs = pkgs
 	return nil
 }
+
+//func setPTAScope(lconf *loader.Config, scope []string) error {
+//	if len(scope) == 0 {
+//		return fmt.Errorf("no packages specified for pointer analysis scope")
+//	}
+
+//	// Determine initial packages for PTA.
+//	args, err := lconf.FromArgs(scope, true)
+//	if err != nil {
+//		return err
+//	}
+//	if len(args) > 0 {
+//		return fmt.Errorf("surplus arguments: %q", args)
+//	}
+//	return nil
+//}
 
 // Create a pointer.Config whose scope is the initial packages of lprog
 // and their dependencies.

@@ -7,7 +7,6 @@ package oracle
 import (
 	"fmt"
 	"go/build"
-	"log"
 	"os"
 	"runtime"
 
@@ -59,21 +58,21 @@ func runOracle(cmd *command.Command, args []string) error {
 	}
 	mode := args[0]
 	args = args[1:]
-	if args[0] == "." {
-		pkgPath, err := os.Getwd()
-		if err != nil {
-			log.Fatalln(err)
-		}
-		pkg, err := build.Default.ImportDir(pkgPath, 0)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		args = pkg.GoFiles
-		//log.Println(pkg.ImportPath)
-		if pkg.ImportPath != "." && pkg.ImportPath != "" {
-			args = []string{pkg.ImportPath}
-		}
-	}
+	//	if args[0] == "." {
+	//		pkgPath, err := os.Getwd()
+	//		if err != nil {
+	//			log.Fatalln(err)
+	//		}
+	//		pkg, err := build.Default.ImportDir(pkgPath, 0)
+	//		if err != nil {
+	//			log.Fatalln(err)
+	//		}
+	//		args = pkg.GoFiles
+	//		//log.Println(pkg.ImportPath)
+	//		if pkg.ImportPath != "." && pkg.ImportPath != "" {
+	//			args = []string{pkg.ImportPath}
+	//		}
+	//	}
 	query := oracle.Query{
 		Mode:       mode,
 		Pos:        oraclePos,
