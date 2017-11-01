@@ -184,7 +184,9 @@ _, _ := bytes.Buffer, bytes.NewReader
 `,
 		out: `package foo
 
-import "bytes"
+import (
+	"bytes"
+)
 
 func bar() {
 	_, _ := bytes.Buffer, bytes.NewReader
