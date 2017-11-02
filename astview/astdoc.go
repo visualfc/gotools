@@ -285,7 +285,7 @@ var (
 	todoList     = "TODO,BUG,FIXME,NOTE,SECBUG"
 	bug_markers  = regexp.MustCompile("^/[/*][ \t]*BUG\\(.*\\):[ \t]*") // BUG(uid):
 	bug_content  = regexp.MustCompile("[^ \n\r\t]+")                    // at least one non-whitespace char
-	todo_markers = regexp.MustCompile(fmt.Sprintf("^/[/*][ \t](%s)[\\s\\:\\(\\,].*$", strings.Replace(todoList, ",", "|", -1)))
+	todo_markers = regexp.MustCompile(fmt.Sprintf("^/[/*][ \t]*(%s)[\\s\\:\\(\\,].*$", strings.Replace(todoList, ",", "|", -1)))
 )
 
 // addFile adds the AST for a source file to the docReader.
