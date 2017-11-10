@@ -20,7 +20,7 @@ var Command = &command.Command{
 
 func runTerminal(cmd *command.Command, args []string) (err error) {
 	var c *exec.Cmd
-	if len(args) >= 2 {
+	if len(args) >= 1 {
 		var carg []string
 		if len(args) >= 2 {
 			carg = append(carg, args[1:]...)
