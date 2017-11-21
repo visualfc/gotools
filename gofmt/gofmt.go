@@ -19,6 +19,7 @@ import (
 
 	"github.com/visualfc/gotools/command"
 	"github.com/visualfc/gotools/godiff"
+	"golang.org/x/tools/imports"
 )
 
 var Command = &command.Command{
@@ -66,7 +67,7 @@ var (
 	initModesOnce sync.Once // guards calling initModes
 	//parserMode    parser.Mode
 	//printerMode   printer.Mode
-	options *Options
+	options *imports.Options
 )
 
 func report(err error) {
@@ -88,14 +89,13 @@ func runGofmt(cmd *command.Command, args []string) error {
 		gofmtSortImports = true
 	}
 
-	options = &Options{
-		FixImports:  gofmtFixImports,
-		SortImports: gofmtSortImports,
-		TabWidth:    gofmtTabWidth,
-		TabIndent:   gofmtTabIndent,
-		Comments:    gofmtComments,
-		AllErrors:   gofmtAllErrors,
-		Fragment:    true,
+	options = &imports.Options{
+		FormatOnly: !gofmtFixImports,
+		TabWidth:   gofmtTabWidth,
+		TabIndent:  gofmtTabIndent,
+		Comments:   gofmtComments,
+		AllErrors:  gofmtAllErrors,
+		Fragment:   true,
 	}
 
 	if len(args) == 0 {
@@ -141,7 +141,7 @@ func processFile(filename string, in io.Reader, out io.Writer, stdin bool) error
 		return err
 	}
 
-	res, err := Process(filename, src, options)
+	res, err := imports.Process(filename, src, options)
 	if err != nil {
 		return err
 	}
