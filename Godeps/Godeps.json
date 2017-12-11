@@ -18,51 +18,51 @@
 		},
 		{
 			"ImportPath": "golang.org/x/tools/container/intsets",
-			"Rev": "6d70fb2e85323e81c89374331d3d2b93304faa36"
+			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/ast/astutil",
-			"Rev": "6d70fb2e85323e81c89374331d3d2b93304faa36"
+			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/buildutil",
-			"Rev": "6d70fb2e85323e81c89374331d3d2b93304faa36"
+			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/callgraph",
-			"Rev": "6d70fb2e85323e81c89374331d3d2b93304faa36"
+			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/loader",
-			"Rev": "6d70fb2e85323e81c89374331d3d2b93304faa36"
+			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/pointer",
-			"Rev": "6d70fb2e85323e81c89374331d3d2b93304faa36"
+			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/ssa",
-			"Rev": "6d70fb2e85323e81c89374331d3d2b93304faa36"
+			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/ssa/ssautil",
-			"Rev": "6d70fb2e85323e81c89374331d3d2b93304faa36"
+			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/types/typeutil",
-			"Rev": "6d70fb2e85323e81c89374331d3d2b93304faa36"
+			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/imports",
-			"Rev": "6d70fb2e85323e81c89374331d3d2b93304faa36"
+			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/present",
-			"Rev": "6d70fb2e85323e81c89374331d3d2b93304faa36"
+			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/refactor/importgraph",
-			"Rev": "6d70fb2e85323e81c89374331d3d2b93304faa36"
+			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
 		}
 	]
 }
