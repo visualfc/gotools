@@ -18,51 +18,51 @@
 		},
 		{
 			"ImportPath": "golang.org/x/tools/container/intsets",
-			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
+			"Rev": "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/ast/astutil",
-			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
+			"Rev": "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/buildutil",
-			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
+			"Rev": "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/callgraph",
-			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
+			"Rev": "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/loader",
-			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
+			"Rev": "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/pointer",
-			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
+			"Rev": "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/ssa",
-			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
+			"Rev": "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/ssa/ssautil",
-			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
+			"Rev": "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/types/typeutil",
-			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
+			"Rev": "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/imports",
-			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
+			"Rev": "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/present",
-			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
+			"Rev": "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/refactor/importgraph",
-			"Rev": "5d8e38b9550d35d893ff8276756b4118ec1bf360"
+			"Rev": "ce871d178848e3eea1e8795e5cfb74053dde4bb9"
 		}
 	]
 }
