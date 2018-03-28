@@ -60,16 +60,16 @@ func (c *Command) Name() string {
 }
 
 func (c *Command) Usage() {
-	fmt.Fprintf(os.Stderr, "usage: %s %s\n", AppName, c.UsageLine)
-	c.Flag.SetOutput(os.Stderr)
+	fmt.Fprintf(c.Stderr, "usage: %s %s\n", AppName, c.UsageLine)
+	c.Flag.SetOutput(c.Stderr)
 	c.Flag.PrintDefaults()
 	//fmt.Fprintf(os.Stderr, "%s\n", strings.TrimSpace(c.Long))
-	os.Exit(2)
+	//os.Exit(2)
 }
 
 func (c *Command) PrintUsage() {
-	fmt.Fprintf(Stderr, "usage: %s %s\n", AppName, c.UsageLine)
-	c.Flag.SetOutput(Stderr)
+	fmt.Fprintf(c.Stderr, "usage: %s %s\n", AppName, c.UsageLine)
+	c.Flag.SetOutput(c.Stderr)
 	c.Flag.PrintDefaults()
 }
 
@@ -140,15 +140,18 @@ func RunArgs(arguments []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	for _, cmd := range commands {
 		if cmd.Name() == args[0] && cmd.Run != nil {
 			cmd.Flag.Usage = func() { cmd.Usage() }
-			if cmd.CustomFlags {
-				args = args[1:]
-			} else {
-				cmd.Flag.Parse(args[1:])
-				args = cmd.Flag.Args()
-			}
 			cmd.Stdin = stdin
 			cmd.Stdout = stdout
 			cmd.Stderr = stderr
+			if cmd.CustomFlags {
+				args = args[1:]
+			} else {
+				err := cmd.Flag.Parse(args[1:])
+				if err != nil {
+					return err
+				}
+				args = cmd.Flag.Args()
+			}
 			return cmd.Run(cmd, args)
 		}
 	}

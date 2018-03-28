@@ -157,6 +157,7 @@ func runDoc(cmd *command.Command, args []string) error {
 	case 2:
 		if packageFlag {
 			cmd.Usage()
+			return os.ErrInvalid
 		}
 		pkg, name = args[0], args[1]
 	default:
