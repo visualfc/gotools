@@ -43,17 +43,17 @@ func runAstView(cmd *command.Command, args []string) error {
 		return os.ErrInvalid
 	}
 	if astViewStdin {
-		view, err := NewFilePackageSource(args[0], os.Stdin, true)
+		view, err := NewFilePackageSource(args[0], cmd.Stdin, true)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "astview: %s", err)
+			fmt.Fprintf(cmd.Stderr, "astview: %s", err)
 			command.SetExitStatus(3)
 			command.Exit()
 		}
-		view.PrintTree(os.Stdout)
+		view.PrintTree(cmd.Stdout)
 	} else {
-		err := PrintFilesTree(args, os.Stdout, true)
+		err := PrintFilesTree(args, cmd.Stdout, true)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "astview:%s", err)
+			fmt.Fprintf(cmd.Stderr, "astview:%s", err)
 			command.SetExitStatus(3)
 			command.Exit()
 		}
@@ -188,7 +188,7 @@ func PrintFilesTree(filenames []string, w io.Writer, expr bool) error {
 	return nil
 }
 
-func NewFilePackageSource(filename string, f *os.File, expr bool) (*PackageView, error) {
+func NewFilePackageSource(filename string, f io.Reader, expr bool) (*PackageView, error) {
 	src, err := ioutil.ReadAll(f)
 	if err != nil {
 		return nil, err
