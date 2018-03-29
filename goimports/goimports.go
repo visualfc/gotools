@@ -87,7 +87,7 @@ func runGoimports(cmd *command.Command, args []string) error {
 	}
 
 	if len(args) == 0 {
-		if err := processFile("<standard input>", os.Stdin, os.Stdout, true); err != nil {
+		if err := processFile("<standard input>", cmd.Stdin, cmd.Stdout, true); err != nil {
 			report(err)
 		}
 	} else {
@@ -98,7 +98,7 @@ func runGoimports(cmd *command.Command, args []string) error {
 			case dir.IsDir():
 				walkDir(path)
 			default:
-				if err := processFile(path, nil, os.Stdout, false); err != nil {
+				if err := processFile(path, nil, cmd.Stdout, false); err != nil {
 					report(err)
 				}
 			}

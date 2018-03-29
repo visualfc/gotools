@@ -7,7 +7,6 @@ package gofmt
 import (
 	"bytes"
 	"fmt"
-	"go/scanner"
 	"go/token"
 	"io"
 	"io/ioutil"
@@ -70,18 +69,10 @@ var (
 	options *imports.Options
 )
 
-func report(err error) {
-	scanner.PrintError(os.Stderr, err)
-	exitCode = 2
-}
-
 func runGofmt(cmd *command.Command, args []string) error {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	if gofmtTabWidth < 0 {
-		fmt.Fprintf(os.Stderr, "negative tabwidth %d\n", gofmtTabWidth)
-		exitCode = 2
-		os.Exit(exitCode)
 		return os.ErrInvalid
 	}
 
@@ -99,24 +90,23 @@ func runGofmt(cmd *command.Command, args []string) error {
 	}
 
 	if len(args) == 0 {
-		if err := processFile("<standard input>", os.Stdin, os.Stdout, true); err != nil {
-			report(err)
+		if err := processFile("<standard input>", cmd.Stdin, cmd.Stdout, true); err != nil {
+			return err
 		}
 	} else {
 		for _, path := range args {
 			switch dir, err := os.Stat(path); {
 			case err != nil:
-				report(err)
+				fmt.Fprintln(cmd.Stderr, err)
 			case dir.IsDir():
 				walkDir(path)
 			default:
-				if err := processFile(path, nil, os.Stdout, false); err != nil {
-					report(err)
+				if err := processFile(path, nil, cmd.Stdout, false); err != nil {
+					fmt.Fprintln(cmd.Stderr, err)
 				}
 			}
 		}
 	}
-	os.Exit(exitCode)
 	return nil
 }
 
@@ -188,7 +178,7 @@ func visitFile(path string, f os.FileInfo, err error) error {
 		err = processFile(path, nil, os.Stdout, false)
 	}
 	if err != nil {
-		report(err)
+		return err
 	}
 	return nil
 }
