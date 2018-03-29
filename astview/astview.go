@@ -323,7 +323,7 @@ func (p *PackageView) PrintImports(w io.Writer, level int, tag, tag_folder strin
 		level++
 	}
 	var parentPkg *pkgutil.Package
-	if pkgutil.IsVendorExperiment() {
+	if pkgutil.IsVendorExperiment() && p.pkg != nil {
 		for filename, _ := range p.pkg.Files {
 			if !filepath.IsAbs(filename) {
 				name, err := filepath.Abs(filename)
