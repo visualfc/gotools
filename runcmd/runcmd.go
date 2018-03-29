@@ -37,9 +37,6 @@ func runCmd(cmd *command.Command, args []string) error {
 		var err error
 		execWorkPath, err = os.Getwd()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "liteide_stub exec: os.Getwd() false\n")
-			command.SetExitStatus(3)
-			command.Exit()
 			return err
 		}
 	}
@@ -50,9 +47,7 @@ func runCmd(cmd *command.Command, args []string) error {
 		filePath, err = exec.LookPath("./" + fileName)
 	}
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "liteide_stub exec: file %s not found\n", fileName)
-		command.SetExitStatus(3)
-		command.Exit()
+		return err
 	}
 
 	fmt.Println("Starting Process", filePath, strings.Join(args[1:], " "), "...")
@@ -82,6 +77,4 @@ func exitWaitEnter() {
 	fmt.Println("\nPress enter key to continue")
 	var s = [256]byte{}
 	os.Stdin.Read(s[:])
-	command.SetExitStatus(0)
-	command.Exit()
 }

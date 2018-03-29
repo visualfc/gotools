@@ -45,13 +45,11 @@ func runPresent(cmd *command.Command, args []string) error {
 	if presentVerifyOnly {
 		err := VerifyDoc(presentInput)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "present:%s", err)
-			command.SetExitStatus(3)
-			command.Exit()
+			return err
 		}
 		return nil
 	}
-	w := os.Stdout
+	w := cmd.Stdout
 	if !presentStdout {
 		if presentOutput == "" {
 			presentOutput = presentInput + ".html"
@@ -63,18 +61,11 @@ func runPresent(cmd *command.Command, args []string) error {
 		var err error
 		w, err = os.Create(presentOutput)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "present:%s", err)
-			command.SetExitStatus(3)
-			command.Exit()
+			return err
 		}
 	}
 	err := RenderDoc(w, presentInput)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "present:%s", err)
-		command.SetExitStatus(3)
-		command.Exit()
-	}
-	return nil
+	return err
 }
 
 var extensions = map[string]string{

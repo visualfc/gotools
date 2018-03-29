@@ -14,7 +14,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"sync"
 	"text/template"
 	"unicode"
 	"unicode/utf8"
@@ -100,17 +99,6 @@ func CommandList() (cmds []string) {
 	return
 }
 
-var exitStatus = 0
-var exitMu sync.Mutex
-
-func SetExitStatus(n int) {
-	exitMu.Lock()
-	if exitStatus < n {
-		exitStatus = n
-	}
-	exitMu.Unlock()
-}
-
 var (
 	Stdout io.Writer = os.Stdout
 	Stderr io.Writer = os.Stderr
@@ -162,17 +150,21 @@ func RunArgs(arguments []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 }
 
 func Main() {
-	flag.Usage = usage
+	flag.Usage = func() {
+		printUsage(os.Stderr)
+	}
 	flag.Parse()
 	log.SetFlags(0)
 
 	args := flag.Args()
 	if len(args) < 1 {
-		usage()
+		flag.Usage()
+		Exit(2)
 	}
 
 	if len(args) == 1 && strings.TrimSpace(args[0]) == "" {
-		usage()
+		flag.Usage()
+		Exit(2)
 	}
 
 	if args[0] == "help" {
@@ -184,29 +176,32 @@ func Main() {
 
 	for _, cmd := range commands {
 		if cmd.Name() == args[0] && cmd.Run != nil {
-			cmd.Flag.Usage = func() { cmd.Usage() }
-			if cmd.CustomFlags {
-				args = args[1:]
-			} else {
-				cmd.Flag.Parse(args[1:])
-				args = cmd.Flag.Args()
-			}
 			cmd.Stdin = Stdin
 			cmd.Stdout = Stdout
 			cmd.Stderr = Stderr
+			if cmd.CustomFlags {
+				args = args[1:]
+			} else {
+				err := cmd.Flag.Parse(args[1:])
+				if err != nil {
+					Exit(2)
+				}
+				args = cmd.Flag.Args()
+			}
+			cmd.Flag.Usage = func() { cmd.Usage() }
 			err := cmd.Run(cmd, args)
 			if err != nil {
-				SetExitStatus(2)
+				fmt.Println(err)
+				Exit(2)
 			}
-			Exit()
+			Exit(0)
 			return
 		}
 	}
 
 	fmt.Fprintf(os.Stderr, "%s: unknown subcommand %q\nRun '%s help' for usage.\n",
 		AppName, args[0], AppName)
-	SetExitStatus(2)
-	Exit()
+	Exit(2)
 }
 
 var AppInfo string = "LiteIDE golang tool."
@@ -276,11 +271,6 @@ func printUsage(w io.Writer) {
 	tmpl(w, strings.Replace(usageTemplate, "{{AppName}}", AppName, -1), commands)
 }
 
-func usage() {
-	printUsage(os.Stderr)
-	os.Exit(2)
-}
-
 // help implements the 'help' command.
 func help(args []string) bool {
 	if len(args) == 0 {
@@ -313,37 +303,9 @@ func help(args []string) bool {
 	}
 
 	fmt.Fprintf(os.Stderr, "Unknown help topic %#q.  Run '%s help'.\n", arg, AppName)
-	//os.Exit(2) // failed at 'go help cmd'
 	return false
 }
 
-var atexitFuncs []func()
-
-func Atexit(f func()) {
-	atexitFuncs = append(atexitFuncs, f)
-}
-
-func Exit() {
-	for _, f := range atexitFuncs {
-		f()
-	}
-	os.Exit(exitStatus)
-}
-
-func Fatalf(format string, args ...interface{}) {
-	Errorf(format, args...)
-	Exit()
-}
-
-func Errorf(format string, args ...interface{}) {
-	log.Printf(format, args...)
-	SetExitStatus(1)
-}
-
-var logf = log.Printf
-
-func ExitIfErrors() {
-	if exitStatus != 0 {
-		Exit()
-	}
+func Exit(code int) {
+	os.Exit(code)
 }

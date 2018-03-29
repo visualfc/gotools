@@ -45,17 +45,13 @@ func runAstView(cmd *command.Command, args []string) error {
 	if astViewStdin {
 		view, err := NewFilePackageSource(args[0], cmd.Stdin, true)
 		if err != nil {
-			fmt.Fprintf(cmd.Stderr, "astview: %s", err)
-			command.SetExitStatus(3)
-			command.Exit()
+			return err
 		}
 		view.PrintTree(cmd.Stdout)
 	} else {
 		err := PrintFilesTree(args, cmd.Stdout, true)
 		if err != nil {
-			fmt.Fprintf(cmd.Stderr, "astview:%s", err)
-			command.SetExitStatus(3)
-			command.Exit()
+			return err
 		}
 	}
 	return nil

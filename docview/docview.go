@@ -112,12 +112,10 @@ func runDocView(cmd *command.Command, args []string) error {
 		}
 	}
 	if info == nil {
-		fmt.Fprintf(os.Stderr, "<error>\n")
-		command.SetExitStatus(3)
-		command.Exit()
+		return os.ErrNotExist
 	}
 	contents := info.GetPkgList(docViewMode, template)
-	fmt.Fprintf(os.Stdout, "%s", contents)
+	fmt.Fprintf(cmd.Stdout, "%s", contents)
 	return nil
 }
 
