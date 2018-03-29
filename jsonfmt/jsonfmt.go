@@ -53,8 +53,8 @@ func runJsonFmt(cmd *command.Command, args []string) error {
 	opt.Diff = jsonFmtDiff
 
 	if len(args) == 0 {
-		if err := processJsonFile("<standard input>", os.Stdin, os.Stdout, true, opt); err != nil {
-			reportJsonError(err)
+		if err := processJsonFile("<standard input>", cmd.Stdin, cmd.Stdout, true, opt); err != nil {
+			return err
 		}
 	} else {
 		for _, path := range args {
@@ -64,7 +64,7 @@ func runJsonFmt(cmd *command.Command, args []string) error {
 			case dir.IsDir():
 				filepath.Walk(path, func(path string, f os.FileInfo, err error) error {
 					if err == nil && isJsonFile(f) {
-						err = processJsonFile(path, nil, os.Stdout, false, opt)
+						err = processJsonFile(path, nil, cmd.Stdout, false, opt)
 					}
 					if err != nil {
 						reportJsonError(err)
@@ -72,7 +72,7 @@ func runJsonFmt(cmd *command.Command, args []string) error {
 					return nil
 				})
 			default:
-				if err := processJsonFile(path, nil, os.Stdout, false, opt); err != nil {
+				if err := processJsonFile(path, nil, cmd.Stdout, false, opt); err != nil {
 					reportJsonError(err)
 				}
 			}
@@ -99,7 +99,6 @@ func isJsonFile(f os.FileInfo) bool {
 
 func reportJsonError(err error) {
 	fmt.Fprintf(os.Stderr, "%s\n", err)
-	os.Exit(2)
 }
 
 func processJson(filename string, src []byte, opt *JsonFmtOption) ([]byte, error) {
@@ -166,7 +165,7 @@ func processJsonFile(filename string, in io.Reader, out io.Writer, stdin bool, o
 			if err != nil {
 				return fmt.Errorf("computing diff: %s", err)
 			}
-			fmt.Printf("diff %s json/%s\n", filename, filename)
+			fmt.Fprintf(out, "diff %s json/%s\n", filename, filename)
 			out.Write(data)
 		}
 	}

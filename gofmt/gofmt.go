@@ -153,14 +153,14 @@ func processFile(filename string, in io.Reader, out io.Writer, stdin bool) error
 				if err != nil {
 					return fmt.Errorf("computing diff: %s", err)
 				}
-				fmt.Printf("diff %s gofmt/%s\n", filename, filename)
+				fmt.Fprintf(out, "diff %s gofmt/%s\n", filename, filename)
 				out.Write([]byte(data))
 			} else {
 				data, err := godiff.UnifiedDiffBytesByCmd(src, res)
 				if err != nil {
 					return fmt.Errorf("computing diff: %s", err)
 				}
-				fmt.Printf("diff %s gofmt/%s\n", filename, filename)
+				fmt.Fprintf(out, "diff %s gofmt/%s\n", filename, filename)
 				out.Write(data)
 			}
 		}
