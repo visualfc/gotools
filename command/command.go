@@ -191,7 +191,7 @@ func Main() {
 			cmd.Flag.Usage = func() { cmd.Usage() }
 			err := cmd.Run(cmd, args)
 			if err != nil {
-				fmt.Println(err)
+				fmt.Fprintln(cmd.Stderr, err)
 				Exit(2)
 			}
 			Exit(0)
