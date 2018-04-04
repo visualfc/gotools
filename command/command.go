@@ -106,6 +106,9 @@ var (
 )
 
 func RunArgs(arguments []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	flag.CommandLine.VisitAll(func(f *flag.Flag) {
+		f.Value.Set(f.DefValue)
+	})
 	flag.CommandLine.Parse(arguments)
 	args := flag.Args()
 	if len(args) < 1 {
@@ -127,6 +130,9 @@ func RunArgs(arguments []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 
 	for _, cmd := range commands {
 		if cmd.Name() == args[0] && cmd.Run != nil {
+			cmd.Flag.VisitAll(func(f *flag.Flag) {
+				f.Value.Set(f.DefValue)
+			})
 			cmd.Flag.Usage = func() { cmd.Usage() }
 			cmd.Stdin = stdin
 			cmd.Stdout = stdout
