@@ -44,7 +44,7 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/tools/oracle"
+	"github.com/visualfc/gotools/oracle/oracle"
 )
 
 var updateFlag = flag.Bool("update", false, "Update the golden files.")
