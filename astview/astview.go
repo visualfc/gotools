@@ -344,7 +344,7 @@ func (p *PackageView) PrintImports(w io.Writer, level int, tag, tag_folder strin
 			}
 		}
 		if parentPkg != nil {
-			name = pkgutil.VendoredImportPath(parentPkg, name)
+			name, _ = pkgutil.VendoredImportPath(parentPkg, name)
 		}
 		fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag, name, strings.Join(ps, ";"))
 	}

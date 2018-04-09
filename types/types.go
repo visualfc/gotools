@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/visualfc/gotools/buildctx"
 	"github.com/visualfc/gotools/command"
 	"github.com/visualfc/gotools/pkgutil"
 	"github.com/visualfc/gotools/stdlib"
@@ -167,10 +168,10 @@ func runTypes(cmd *command.Command, args []string) error {
 		}()
 	}
 	typesTagList = strings.Split(typesTags, " ")
-	context := build.Default
+	context := buildctx.System()
 	context.BuildTags = append(typesTagList, context.BuildTags...)
 
-	w := NewPkgWalker(&context)
+	w := NewPkgWalker(context)
 	var cursor *FileCursor
 	if typesFilePos != "" {
 		var cursorInfo FileCursor
@@ -312,7 +313,11 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 			name = filepath.Join(parentDir, name)
 		} else if pkgutil.IsVendorExperiment() {
 			parentPkg := pkgutil.ImportDir(parentDir)
-			name = pkgutil.VendoredImportPath(parentPkg, name)
+			var err error
+			name, err = pkgutil.VendoredImportPath(parentPkg, name)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -416,7 +421,7 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 				f, err = w.parseFile(bp.Dir, file, nil)
 			}
 			if err != nil && typesVerbose {
-				fmt.Fprintf(w.cmd.Stderr, "error parsing package %s: %s\n", name, err)
+				fmt.Fprintln(w.cmd.Stderr, err)
 			}
 			files = append(files, f)
 			fileMap[file] = f
@@ -434,7 +439,7 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 		Importer:         &Importer{w, conf, bp.Dir},
 		Error: func(err error) {
 			if typesVerbose {
-				fmt.Println(w.cmd.Stderr, err)
+				fmt.Fprintln(w.cmd.Stderr, err)
 			}
 		},
 	}

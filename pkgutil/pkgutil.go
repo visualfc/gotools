@@ -1,9 +1,9 @@
 package pkgutil
 
 import (
+	"fmt"
 	"go/build"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -131,9 +131,9 @@ func expandPath(p string) string {
 // If parent is x/y/z, then path might expand to x/y/z/vendor/path, x/y/vendor/path,
 // x/vendor/path, vendor/path, or else stay path if none of those exist.
 // vendoredImportPath returns the expanded path or, if no expansion is found, the original.
-func VendoredImportPath(parent *Package, path string) (found string) {
+func VendoredImportPath(parent *Package, path string) (found string, err error) {
 	if parent == nil || parent.Root == "" {
-		return path
+		return path, nil
 	}
 
 	dir := filepath.Clean(parent.Dir)
@@ -144,8 +144,7 @@ func VendoredImportPath(parent *Package, path string) (found string) {
 		root = expandPath(root)
 	}
 	if !hasFilePathPrefix(dir, root) || len(dir) <= len(root) || dir[len(root)] != filepath.Separator {
-		log.Println("invalid vendoredImportPath: dir=%q root=%q separator=%q", dir, root, string(filepath.Separator))
-		return ""
+		return "", fmt.Errorf("invalid vendoredImportPath: dir=%q root=%q separator=%q", dir, root, string(filepath.Separator))
 	}
 
 	vpath := "vendor/" + path
@@ -182,12 +181,12 @@ func VendoredImportPath(parent *Package, path string) (found string) {
 				// and found c:\gopath\src\vendor\path.
 				// We chopped \foo\bar (length 8) but the import path is "foo/bar" (length 7).
 				// Use "vendor/path" without any prefix.
-				return vpath
+				return vpath, nil
 			}
-			return importPath[:len(importPath)-chopped] + "/" + vpath
+			return importPath[:len(importPath)-chopped] + "/" + vpath, nil
 		}
 	}
-	return path
+	return path, nil
 }
 
 // hasGoFiles reports whether dir contains any files with names ending in .go.
