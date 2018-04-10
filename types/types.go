@@ -587,10 +587,6 @@ func (w *PkgWalker) LookupImport(pkg *types.Package, pkgInfo *types.Info, cursor
 		return err
 	}
 
-	if typesFindDef {
-		w.cmd.Println(w.fset.Position(is.Pos()))
-	}
-
 	fbase := fpath
 	pos := strings.LastIndexAny(fpath, "./-\\")
 	if pos != -1 {
@@ -604,12 +600,26 @@ func (w *PkgWalker) LookupImport(pkg *types.Package, pkgInfo *types.Info, cursor
 		fname = fbase
 	}
 
+	var bp *build.Package
+	if typesFindDef {
+		bp, err = w.importPath(fpath, 0)
+		if err == nil {
+			w.cmd.Println(w.fset.Position(is.Pos()).String() + ":" + fname + ":" + fpath + ":" + bp.Dir)
+		} else {
+			w.cmd.Println(w.fset.Position(is.Pos()))
+		}
+	}
+
 	if typesFindInfo {
 		if fname == fpath {
-			w.cmd.Printf("package %s\n", fname)
+			w.cmd.Printf("import %s\n", fname)
 		} else {
-			w.cmd.Printf("package %s (%q)\n", fname, fpath)
+			w.cmd.Printf("import %s (%q)\n", fname, fpath)
 		}
+	}
+
+	if typesFindDoc && bp != nil && bp.Doc != "" {
+		w.cmd.Println(bp.Doc)
 	}
 
 	if !typesFindUse {
