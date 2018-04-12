@@ -604,7 +604,7 @@ func (w *PkgWalker) LookupImport(pkg *types.Package, pkgInfo *types.Info, cursor
 	if typesFindDef {
 		bp, err = w.importPath(fpath, 0)
 		if err == nil {
-			w.cmd.Println(w.fset.Position(is.Pos()).String() + ":" + fname + ":" + fpath + ":" + bp.Dir)
+			w.cmd.Println(w.fset.Position(is.Pos()).String() + "::" + fname + "::" + fpath + "::" + bp.Dir)
 		} else {
 			w.cmd.Println(w.fset.Position(is.Pos()))
 		}
