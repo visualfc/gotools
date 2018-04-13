@@ -29,6 +29,7 @@ var Command = &command.Command{
 var (
 	pkgsList       bool
 	pkgsJson       bool
+	pkgsSimple     bool
 	pkgsFind       string
 	pkgsStd        bool
 	pkgsPkgOnly    bool
@@ -38,6 +39,7 @@ var (
 func init() {
 	Command.Flag.BoolVar(&pkgsList, "list", false, "list all package")
 	Command.Flag.BoolVar(&pkgsJson, "json", false, "json format")
+	Command.Flag.BoolVar(&pkgsSimple, "simple", false, "simple format")
 	Command.Flag.BoolVar(&pkgsStd, "std", false, "std library")
 	Command.Flag.BoolVar(&pkgsPkgOnly, "pkg", false, "pkg only")
 	Command.Flag.BoolVar(&pkgsSkipGoroot, "skip_goroot", false, "skip goroot")
@@ -54,43 +56,38 @@ func runPkgs(cmd *command.Command, args []string) error {
 	var pp PathPkgsIndex
 	pp.LoadIndex()
 	pp.Sort()
+	export := func(pkg *build.Package) {
+		if pkgsJson {
+			var p GoPackage
+			p.copyBuild(pkg)
+			b, err := json.MarshalIndent(&p, "", "\t")
+			if err == nil {
+				cmd.Stdout.Write(b)
+				cmd.Stdout.Write([]byte{'\n'})
+			}
+		} else if pkgsSimple {
+			cmd.Println(pkg.Name + "::" + pkg.ImportPath + "::" + pkg.Dir)
+		} else {
+			cmd.Println(pkg.ImportPath)
+		}
+	}
 	if pkgsList {
 		for _, pi := range pp.indexs {
 			for _, pkg := range pi.pkgs {
 				if pkgsPkgOnly && pkg.IsCommand() {
 					continue
 				}
-				if pkgsJson {
-					var p GoPackage
-					p.copyBuild(pkg)
-					b, err := json.MarshalIndent(&p, "", "\t")
-					if err == nil {
-						cmd.Stdout.Write(b)
-						cmd.Stdout.Write([]byte{'\n'})
-					}
-				} else {
-					cmd.Println(pkg.ImportPath)
-				}
+				export(pkg)
 			}
 		}
 	} else if pkgsFind != "" {
 		for _, pi := range pp.indexs {
 			for _, pkg := range pi.pkgs {
+				if pkgsPkgOnly && pkg.IsCommand() {
+					continue
+				}
 				if pkg.Name == pkgsFind {
-					if pkgsPkgOnly && pkg.IsCommand() {
-						continue
-					}
-					if pkgsJson {
-						var p GoPackage
-						p.copyBuild(pkg)
-						b, err := json.MarshalIndent(p, "", "\t")
-						if err == nil {
-							cmd.Stdout.Write(b)
-							cmd.Stdout.Write([]byte{'\n'})
-						}
-					} else {
-						cmd.Println(pkg.Name)
-					}
+					export(pkg)
 					break
 				}
 			}
