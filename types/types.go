@@ -602,7 +602,20 @@ func (w *PkgWalker) LookupImport(pkg *types.Package, pkgInfo *types.Info, cursor
 
 	var bp *build.Package
 	if typesFindDef {
-		bp, err = w.importPath(fpath, 0)
+		var findpath string = fpath
+		//check imported and vendor
+		for _, v := range w.imported {
+			vpath := v.Path()
+			pos := strings.Index(vpath, "/vendor/")
+			if pos >= 0 {
+				vpath = vpath[pos+8:]
+			}
+			if vpath == fpath {
+				findpath = v.Path()
+				break
+			}
+		}
+		bp, err = w.importPath(findpath, build.FindOnly)
 		if err == nil {
 			w.cmd.Println(w.fset.Position(is.Pos()).String() + "::" + fname + "::" + fpath + "::" + bp.Dir)
 		} else {
