@@ -1,11 +1,13 @@
 {
 	"ImportPath": "github.com/visualfc/gotools",
-	"GoVersion": "go1.9",
+	"GoVersion": "go1.10",
 	"GodepVersion": "v79",
-	"Packages": [
-		"."
-	],
 	"Deps": [
+		{
+			"ImportPath": "github.com/derekparker/delve/pkg/goversion",
+			"Comment": "v1.0.0-30-gb9c4a1d",
+			"Rev": "b9c4a1d68c435004c75e94399d538cc9cc1f2657"
+		},
 		{
 			"ImportPath": "github.com/kr/pty",
 			"Comment": "v1.0.0",
