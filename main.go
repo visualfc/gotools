@@ -7,6 +7,7 @@ package main
 import (
 	"github.com/visualfc/gotools/astview"
 	"github.com/visualfc/gotools/command"
+	"github.com/visualfc/gotools/debugflags"
 	"github.com/visualfc/gotools/docview"
 	"github.com/visualfc/gotools/finddecl"
 	"github.com/visualfc/gotools/finddoc"
@@ -37,6 +38,7 @@ func init() {
 	command.Register(gotest.Command)
 	command.Register(finddecl.Command)
 	command.Register(terminal.Command)
+	command.Register(debugflags.Command)
 }
 
 func main() {
