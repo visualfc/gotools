@@ -1,17 +1,20 @@
 {
 	"ImportPath": "github.com/visualfc/gotools",
-	"GoVersion": "go1.10",
-	"GodepVersion": "v79",
+	"GoVersion": "go1.11",
+	"GodepVersion": "v80",
+	"Packages": [
+		"./..."
+	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/derekparker/delve/pkg/goversion",
-			"Comment": "v1.0.0-30-gb9c4a1d",
-			"Rev": "b9c4a1d68c435004c75e94399d538cc9cc1f2657"
+			"Comment": "v1.0.0-75-gbdcbd8a",
+			"Rev": "bdcbd8a846eb7d4953449725ef6a23959198acf1"
 		},
 		{
 			"ImportPath": "github.com/kr/pty",
-			"Comment": "v1.0.0",
-			"Rev": "2c10821df3c3cf905230d078702dfbe9404c9b23"
+			"Comment": "v1.1.2",
+			"Rev": "fa756f09eeb418bf1cc6268c66ceaad9bb98f598"
 		},
 		{
 			"ImportPath": "github.com/pmezard/go-difflib/difflib",
@@ -20,51 +23,55 @@
 		},
 		{
 			"ImportPath": "golang.org/x/tools/container/intsets",
-			"Rev": "ac136b6c2db7c4d43955e4bc7174db36dc0539c0"
+			"Rev": "ffe88906718454e356e61776b54256e873fc133b"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/ast/astutil",
-			"Rev": "ac136b6c2db7c4d43955e4bc7174db36dc0539c0"
+			"Rev": "ffe88906718454e356e61776b54256e873fc133b"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/buildutil",
-			"Rev": "ac136b6c2db7c4d43955e4bc7174db36dc0539c0"
+			"Rev": "ffe88906718454e356e61776b54256e873fc133b"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/callgraph",
-			"Rev": "ac136b6c2db7c4d43955e4bc7174db36dc0539c0"
+			"Rev": "ffe88906718454e356e61776b54256e873fc133b"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/loader",
-			"Rev": "ac136b6c2db7c4d43955e4bc7174db36dc0539c0"
+			"Rev": "ffe88906718454e356e61776b54256e873fc133b"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/pointer",
-			"Rev": "ac136b6c2db7c4d43955e4bc7174db36dc0539c0"
+			"Rev": "ffe88906718454e356e61776b54256e873fc133b"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/ssa",
-			"Rev": "ac136b6c2db7c4d43955e4bc7174db36dc0539c0"
+			"Rev": "ffe88906718454e356e61776b54256e873fc133b"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/ssa/ssautil",
-			"Rev": "ac136b6c2db7c4d43955e4bc7174db36dc0539c0"
+			"Rev": "ffe88906718454e356e61776b54256e873fc133b"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/go/types/typeutil",
-			"Rev": "ac136b6c2db7c4d43955e4bc7174db36dc0539c0"
+			"Rev": "ffe88906718454e356e61776b54256e873fc133b"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/imports",
-			"Rev": "ac136b6c2db7c4d43955e4bc7174db36dc0539c0"
+			"Rev": "ffe88906718454e356e61776b54256e873fc133b"
+		},
+		{
+			"ImportPath": "golang.org/x/tools/internal/fastwalk",
+			"Rev": "ffe88906718454e356e61776b54256e873fc133b"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/present",
-			"Rev": "ac136b6c2db7c4d43955e4bc7174db36dc0539c0"
+			"Rev": "ffe88906718454e356e61776b54256e873fc133b"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/refactor/importgraph",
-			"Rev": "ac136b6c2db7c4d43955e4bc7174db36dc0539c0"
+			"Rev": "ffe88906718454e356e61776b54256e873fc133b"
 		}
 	]
 }
