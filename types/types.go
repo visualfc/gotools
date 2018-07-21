@@ -15,6 +15,7 @@ import (
 	"go/token"
 	"go/types"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -25,6 +26,7 @@ import (
 
 	"github.com/visualfc/gotools/pkg/buildctx"
 	"github.com/visualfc/gotools/pkg/command"
+	"github.com/visualfc/gotools/pkg/gomod"
 	"github.com/visualfc/gotools/pkg/pkgutil"
 	"github.com/visualfc/gotools/pkg/stdlib"
 	"golang.org/x/tools/go/buildutil"
@@ -274,6 +276,7 @@ type PkgWalker struct {
 	gcimported      types.Importer
 	cursor          *FileCursor
 	cmd             *command.Command
+	mod             *gomod.ModuleList
 	//importing       types.Package
 }
 
@@ -296,6 +299,13 @@ func (w *PkgWalker) importPath(path string, mode build.ImportMode) (*build.Packa
 	}
 	if stdlib.IsStdPkg(path) {
 		return stdlib.ImportStdPkg(w.context, path, mode)
+	}
+	//check mod
+	if w.mod != nil {
+		module := w.mod.LookupModule(path)
+		if module != nil {
+			return w.context.ImportDir(module.Dir, mode)
+		}
 	}
 	return w.context.Import(path, "", mode)
 }
@@ -332,7 +342,6 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 	if typesVerbose {
 		w.cmd.Println("parser pkg", parentDir, name)
 	}
-
 	bp, err := w.importPath(name, 0)
 	if err != nil {
 		return nil, err
@@ -381,6 +390,11 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 	}
 
 	if conf.Cursor != nil && conf.Cursor.fileName != "" {
+		// parser cursor mod
+		w.mod = gomod.LooupModList(bp.Dir)
+		if typesVerbose && w.mod != nil {
+			log.Println("parser mod", w.mod.Module)
+		}
 		cursor := conf.Cursor
 		f, _ := w.parseFileEx(bp.Dir, cursor.fileName, cursor.src, true)
 		if f != nil {
