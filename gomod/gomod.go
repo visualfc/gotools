@@ -41,7 +41,16 @@ func ListModuleJson(dir string) []byte {
 
 type ModuleList struct {
 	Module  Module
-	Require []Module
+	Require []*Module
+}
+
+func (m *ModuleList) LookupModule(pkgname string) *Module {
+	for _, r := range m.Require {
+		if r.Path == pkgname {
+			return r
+		}
+	}
+	return nil
 }
 
 type Module struct {
@@ -66,7 +75,7 @@ func parseModuleJson(data []byte) ModuleList {
 				if m.Main {
 					ms.Module = m
 				} else {
-					ms.Require = append(ms.Require, m)
+					ms.Require = append(ms.Require, &m)
 				}
 			}
 		}
