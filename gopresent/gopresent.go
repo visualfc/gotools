@@ -13,7 +13,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/visualfc/gotools/command"
+	"github.com/visualfc/gotools/pkg/command"
 	"golang.org/x/tools/present"
 )
 

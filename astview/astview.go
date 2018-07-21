@@ -16,8 +16,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/visualfc/gotools/command"
-	"github.com/visualfc/gotools/pkgutil"
+	"github.com/visualfc/gotools/pkg/command"
+	"github.com/visualfc/gotools/pkg/pkgutil"
 )
 
 var Command = &command.Command{

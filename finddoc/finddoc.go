@@ -43,7 +43,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/visualfc/gotools/command"
+	"github.com/visualfc/gotools/pkg/command"
 )
 
 const usageDoc = `Find documentation for names.

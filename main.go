@@ -6,7 +6,6 @@ package main
 
 import (
 	"github.com/visualfc/gotools/astview"
-	"github.com/visualfc/gotools/command"
 	"github.com/visualfc/gotools/debugflags"
 	"github.com/visualfc/gotools/docview"
 	"github.com/visualfc/gotools/finddecl"
@@ -17,6 +16,7 @@ import (
 	"github.com/visualfc/gotools/gotest"
 	"github.com/visualfc/gotools/jsonfmt"
 	"github.com/visualfc/gotools/oracle"
+	"github.com/visualfc/gotools/pkg/command"
 	"github.com/visualfc/gotools/pkgs"
 	"github.com/visualfc/gotools/runcmd"
 	"github.com/visualfc/gotools/terminal"

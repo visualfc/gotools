@@ -31,7 +31,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/visualfc/gotools/command"
+	"github.com/visualfc/gotools/pkg/command"
 )
 
 var Command = &command.Command{

@@ -16,8 +16,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/visualfc/gotools/command"
-	"github.com/visualfc/gotools/godiff"
+	"github.com/visualfc/gotools/pkg/command"
+	"github.com/visualfc/gotools/pkg/godiff"
 	"golang.org/x/tools/imports"
 )
 

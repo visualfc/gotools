@@ -23,10 +23,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/visualfc/gotools/buildctx"
-	"github.com/visualfc/gotools/command"
-	"github.com/visualfc/gotools/pkgutil"
-	"github.com/visualfc/gotools/stdlib"
+	"github.com/visualfc/gotools/pkg/buildctx"
+	"github.com/visualfc/gotools/pkg/command"
+	"github.com/visualfc/gotools/pkg/pkgutil"
+	"github.com/visualfc/gotools/pkg/stdlib"
 	"golang.org/x/tools/go/buildutil"
 )
 

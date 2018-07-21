@@ -10,8 +10,8 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/visualfc/gotools/command"
 	"github.com/visualfc/gotools/oracle/oracle"
+	"github.com/visualfc/gotools/pkg/command"
 )
 
 //The mode argument determines the query to perform:
