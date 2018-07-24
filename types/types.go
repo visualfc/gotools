@@ -302,9 +302,9 @@ func (w *PkgWalker) importPath(path string, mode build.ImportMode) (*build.Packa
 	}
 	//check mod
 	if w.mod != nil {
-		module := w.mod.LookupModule(path)
+		module, dir := w.mod.LookupModule(path)
 		if module != nil {
-			pkg, err := w.context.ImportDir(module.Dir, mode)
+			pkg, err := w.context.ImportDir(dir, mode)
 			if pkg != nil {
 				pkg.ImportPath = module.Path
 			}

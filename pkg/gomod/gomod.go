@@ -7,6 +7,7 @@ package gomod
 import (
 	"encoding/json"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -44,13 +45,13 @@ type ModuleList struct {
 	Require []*Module
 }
 
-func (m *ModuleList) LookupModule(pkgname string) *Module {
+func (m *ModuleList) LookupModule(pkgname string) (*Module, string) {
 	for _, r := range m.Require {
-		if strings.Index(pkgname, r.Path) == 0 {
-			return r
+		if strings.HasPrefix(pkgname, r.Path) {
+			return r, filepath.Join(r.Dir, pkgname[len(r.Path):])
 		}
 	}
-	return nil
+	return nil, ""
 }
 
 type Module struct {
