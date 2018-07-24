@@ -46,7 +46,7 @@ type ModuleList struct {
 
 func (m *ModuleList) LookupModule(pkgname string) *Module {
 	for _, r := range m.Require {
-		if r.Path == pkgname {
+		if strings.Index(pkgname, r.Path) == 0 {
 			return r
 		}
 	}
