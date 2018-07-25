@@ -3,6 +3,7 @@ package pkgcheck
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/visualfc/gotools/pkg/pkgutil"
 
@@ -13,23 +14,25 @@ import (
 
 var Command = &command.Command{
 	Run:       runCheck,
-	UsageLine: "pkgcheck -pkg -w .",
+	UsageLine: "pkgcheck [-pkg | -name] -w .",
 	Short:     "pkg check utils",
 	Long:      "check pkg mod or vendor path",
 }
 
 var (
-	flagCheckPkg string
-	flagCheckDir string = "."
+	flagCheckPkg  string
+	flagCheckDir  string = "."
+	flagCheckName bool
 )
 
 func init() {
 	Command.Flag.StringVar(&flagCheckPkg, "pkg", "", "check pkg name")
+	Command.Flag.BoolVar(&flagCheckName, "name", false, "check module name")
 	Command.Flag.StringVar(&flagCheckDir, "w", "", "work path")
 }
 
 func runCheck(cmd *command.Command, args []string) error {
-	if flagCheckPkg == "" {
+	if flagCheckPkg == "" && !flagCheckName {
 		cmd.Usage()
 		return os.ErrInvalid
 	}
@@ -37,6 +40,15 @@ func runCheck(cmd *command.Command, args []string) error {
 		flagCheckDir, _ = os.Getwd()
 	}
 	modList := gomod.LooupModList(flagCheckDir)
+	if flagCheckName {
+		if modList != nil {
+			fmt.Println(modList.Module.Path)
+		} else {
+			_, fname := filepath.Split(flagCheckDir)
+			fmt.Println(fname)
+		}
+		return nil
+	}
 	// check mod, check vendor
 	if modList != nil {
 		m, path, _ := modList.LookupModule(flagCheckPkg)
@@ -48,7 +60,7 @@ func runCheck(cmd *command.Command, args []string) error {
 		pkg := pkgutil.ImportDir(flagCheckDir)
 		if pkg != nil {
 			found, _ := pkgutil.VendoredImportPath(pkg, flagCheckPkg)
-			if found != "" {
+			if found != "" && found != flagCheckPkg {
 				fmt.Printf("%s,vendor\n", found)
 				return nil
 			}
