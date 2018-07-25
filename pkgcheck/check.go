@@ -37,7 +37,14 @@ func runCheck(cmd *command.Command, args []string) error {
 		flagCheckDir, _ = os.Getwd()
 	}
 	modList := gomod.LooupModList(flagCheckDir)
-	if modList == nil {
+	// check mod, check vendor
+	if modList != nil {
+		m, path, _ := modList.LookupModule(flagCheckPkg)
+		if m == nil {
+			fmt.Printf("%s,mod\n", path)
+			return nil
+		}
+	} else {
 		pkg := pkgutil.ImportDir(flagCheckDir)
 		if pkg != nil {
 			found, _ := pkgutil.VendoredImportPath(pkg, flagCheckPkg)
@@ -46,15 +53,7 @@ func runCheck(cmd *command.Command, args []string) error {
 				return nil
 			}
 		}
-		fmt.Println(flagCheckPkg)
-		return nil
 	}
-	if flagCheckPkg != "" {
-		m, dir := modList.LookupModule(flagCheckPkg)
-		if m == nil {
-			return nil
-		}
-		fmt.Printf("%s,mod\n", dir)
-	}
+	fmt.Printf("%s,pkg\n", flagCheckPkg)
 	return nil
 }
