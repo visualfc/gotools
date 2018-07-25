@@ -40,7 +40,7 @@ func runCheck(cmd *command.Command, args []string) error {
 	// check mod, check vendor
 	if modList != nil {
 		m, path, _ := modList.LookupModule(flagCheckPkg)
-		if m == nil {
+		if m != nil {
 			fmt.Printf("%s,mod\n", path)
 			return nil
 		}
