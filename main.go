@@ -17,6 +17,7 @@ import (
 	"github.com/visualfc/gotools/jsonfmt"
 	"github.com/visualfc/gotools/oracle"
 	"github.com/visualfc/gotools/pkg/command"
+	"github.com/visualfc/gotools/pkgcheck"
 	"github.com/visualfc/gotools/pkgs"
 	"github.com/visualfc/gotools/runcmd"
 	"github.com/visualfc/gotools/terminal"
@@ -39,11 +40,12 @@ func init() {
 	command.Register(finddecl.Command)
 	command.Register(terminal.Command)
 	command.Register(debugflags.Command)
+	command.Register(pkgcheck.Command)
 }
 
 func main() {
 	command.AppName = "gotools"
-	command.AppVersion = "1.10"
+	command.AppVersion = "1.11"
 	command.AppInfo = "Go tools for liteide."
 	command.Main()
 }
