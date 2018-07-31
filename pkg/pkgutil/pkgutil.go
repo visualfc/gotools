@@ -118,6 +118,14 @@ func ImportDir(dir string) *Package {
 	return &Package{pkg.Root, pkg.Dir, pkg.ImportPath}
 }
 
+func ImportDirEx(ctx *build.Context, dir string) *Package {
+	pkg, err := ctx.ImportDir(dir, build.FindOnly)
+	if err != nil {
+		return &Package{"", dir, ""}
+	}
+	return &Package{pkg.Root, pkg.Dir, pkg.ImportPath}
+}
+
 // expandPath returns the symlink-expanded form of path.
 func expandPath(p string) string {
 	x, err := filepath.EvalSymlinks(p)

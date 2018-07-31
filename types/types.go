@@ -221,7 +221,7 @@ func runTypes(cmd *command.Command, args []string) error {
 				Selections: make(map[*ast.SelectorExpr]*types.Selection),
 			}
 		}
-		pkg, err := w.Import("", pkgName, conf)
+		pkg, _, err := w.Check(pkgName, conf)
 		if pkg == nil {
 			return fmt.Errorf("error import path %v", err)
 		}
@@ -242,6 +242,10 @@ type FileCursor struct {
 	xtest     bool
 }
 
+func NewFileCursor(src interface{}, filename string, pos int) *FileCursor {
+	return &FileCursor{fileName: filename, cursorPos: pos, src: src}
+}
+
 type PkgConfig struct {
 	IgnoreFuncBodies bool
 	AllowBinary      bool
@@ -257,27 +261,56 @@ type PkgConfig struct {
 
 func NewPkgWalker(context *build.Context) *PkgWalker {
 	return &PkgWalker{
-		context:         context,
+		Context:         context,
 		fset:            token.NewFileSet(),
 		parsedFileCache: map[string]*ast.File{},
+		parsedFileInfo:  map[string]time.Time{},
 		importingName:   map[string]bool{},
-		imported:        map[string]*types.Package{"unsafe": types.Unsafe},
+		Imported:        map[string]*types.Package{"unsafe": types.Unsafe},
+		ImportedMod:     map[string]time.Time{},
 		gcimported:      importer.Default(),
 	}
 }
 
 type PkgWalker struct {
 	fset            *token.FileSet
-	context         *build.Context
+	Context         *build.Context
 	current         *types.Package
 	importingName   map[string]bool
 	parsedFileCache map[string]*ast.File
-	imported        map[string]*types.Package // packages already imported
+	parsedFileInfo  map[string]time.Time
+	Imported        map[string]*types.Package // packages already imported
+	ImportedMod     map[string]time.Time
+	Updated         []string
 	gcimported      types.Importer
 	cursor          *FileCursor
 	cmd             *command.Command
 	mod             *gomod.ModuleList
 	//importing       types.Package
+}
+
+func DefaultPkgConfig() *PkgConfig {
+	conf := &PkgConfig{IgnoreFuncBodies: true, AllowBinary: true, WithTestFiles: false}
+	return conf
+}
+
+func (p *PkgWalker) Check(name string, conf *PkgConfig) (pkg *types.Package, updated []string, err error) {
+	if name == "." {
+		name, _ = os.Getwd()
+	}
+	if conf == nil {
+		conf = DefaultPkgConfig()
+	}
+	if conf.Cursor != nil {
+		conf.Cursor.pkgName = name
+	}
+
+	p.Imported[name] = nil
+	p.importingName = make(map[string]bool)
+	p.Updated = []string{}
+	pkg, err = p.Import("", name, conf)
+	updated = p.Updated
+	return
 }
 
 func contains(list []string, s string) bool {
@@ -295,26 +328,46 @@ func (w *PkgWalker) isBinaryPkg(pkg string) bool {
 
 func (w *PkgWalker) importPath(path string, mode build.ImportMode) (*build.Package, error) {
 	if filepath.IsAbs(path) {
-		return w.context.ImportDir(path, 0)
+		return w.Context.ImportDir(path, 0)
 	}
 	if stdlib.IsStdPkg(path) {
-		return stdlib.ImportStdPkg(w.context, path, mode)
+		return stdlib.ImportStdPkg(w.Context, path, build.AllowBinary)
 	}
 	//check mod
 	if w.mod != nil {
 		module, _, dir := w.mod.LookupModule(path)
 		if module != nil {
-			pkg, err := w.context.ImportDir(dir, mode)
+			pkg, err := w.Context.ImportDir(dir, mode)
 			if pkg != nil {
 				pkg.ImportPath = path
 			}
 			return pkg, err
 		}
 	}
-	return w.context.Import(path, "", mode)
+	return w.Context.Import(path, "", mode)
 }
 
 func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg *types.Package, err error) {
+	return w.ImportHelper(parentDir, name, "", conf)
+}
+
+func lastModTime(dir string, files []string) time.Time {
+	var lastTime time.Time
+	for _, file := range files {
+		filename := filepath.Join(dir, file)
+		info, err := os.Lstat(filename)
+		if err != nil {
+			continue
+		}
+		t := info.ModTime()
+		if t.Unix() > lastTime.Unix() {
+			lastTime = t
+		}
+	}
+	return lastTime
+}
+
+func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path string, conf *PkgConfig) (pkg *types.Package, err error) {
 	defer func() {
 		err := recover()
 		if err != nil && typesVerbose {
@@ -326,7 +379,7 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 		if strings.HasPrefix(name, ".") {
 			name = filepath.Join(parentDir, name)
 		} else if pkgutil.IsVendorExperiment() {
-			parentPkg := pkgutil.ImportDir(parentDir)
+			parentPkg := pkgutil.ImportDirEx(w.Context, parentDir)
 			var err error
 			name, err = pkgutil.VendoredImportPath(parentPkg, name)
 			if err != nil {
@@ -335,28 +388,51 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 		}
 	}
 
-	pkg = w.imported[name]
+	// parser cursor mod
+	if filepath.IsAbs(name) {
+		w.mod = gomod.LooupModList(name)
+		if typesVerbose && w.mod != nil {
+			log.Println("parser mod", w.mod.Module)
+		}
+	}
+
+	bp, err := w.importPath(name, 0)
+
+	if bp == nil {
+		return nil, err
+	}
+	GoFiles := append(append([]string{}, bp.GoFiles...), bp.CgoFiles...)
+	XTestFiles := append([]string{}, bp.XTestGoFiles...)
+
+	if conf.WithTestFiles {
+		GoFiles = append(GoFiles, bp.TestGoFiles...)
+	}
+
+	pkg = w.Imported[name]
+	lastMod := lastModTime(bp.Dir, GoFiles)
 	if pkg != nil {
-		//		if pkg == &w.importing {
-		//			return nil, fmt.Errorf("cycle importing package %q", name)
-		//		}
-		return pkg, nil
+		if t, ok := w.ImportedMod[name]; ok {
+			if t == lastMod {
+				log.Println("skip pkg", name, t)
+				return pkg, nil
+			}
+		}
+		log.Println("parsed", name)
 	}
 
 	if typesVerbose {
 		w.cmd.Println("parser pkg", parentDir, name)
 	}
-	bp, err := w.importPath(name, 0)
-	if err != nil {
-		return nil, err
-	}
-
 	checkName := name
 
 	if bp.ImportPath == "." {
 		checkName = bp.Name
 	} else {
 		checkName = bp.ImportPath
+	}
+
+	if import_path != "" {
+		checkName = import_path
 	}
 
 	if w.importingName[checkName] {
@@ -374,31 +450,19 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 	//		//log.Fatalf("pkg %q, dir %q: ScanDir: %v", name, info.Dir, err)
 	//	}
 
-	GoFiles := append(append([]string{}, bp.GoFiles...), bp.CgoFiles...)
-	XTestFiles := append([]string{}, bp.XTestGoFiles...)
-
-	if conf.WithTestFiles {
-		GoFiles = append(GoFiles, bp.TestGoFiles...)
-	}
-
 	if name == "runtime" {
-		n := fmt.Sprintf("zgoos_%s.go", w.context.GOOS)
+		n := fmt.Sprintf("zgoos_%s.go", w.Context.GOOS)
 		if !contains(GoFiles, n) {
 			GoFiles = append(GoFiles, n)
 		}
 
-		n = fmt.Sprintf("zgoarch_%s.go", w.context.GOARCH)
+		n = fmt.Sprintf("zgoarch_%s.go", w.Context.GOARCH)
 		if !contains(GoFiles, n) {
 			GoFiles = append(GoFiles, n)
 		}
 	}
 
 	if conf.Cursor != nil && conf.Cursor.fileName != "" {
-		// parser cursor mod
-		w.mod = gomod.LooupModList(bp.Dir)
-		if typesVerbose && w.mod != nil {
-			log.Println("parser mod", w.mod.Module)
-		}
 		cursor := conf.Cursor
 		f, _ := w.parseFileEx(bp.Dir, cursor.fileName, cursor.src, true)
 		if f != nil {
@@ -465,12 +529,15 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 		pkg, err = typesConf.Check(checkName, w.fset, files, conf.Info)
 		conf.Pkg = pkg
 	}
+
 	w.importingName[checkName] = false
-	w.imported[name] = pkg
+	w.Imported[name] = pkg
+	w.ImportedMod[name] = lastMod
+	w.Updated = append(w.Updated, name)
 
 	if len(xfiles) > 0 {
 		xpkg, _ := typesConf.Check(checkName+"_test", w.fset, xfiles, conf.XInfo)
-		w.imported[checkName+"_test"] = xpkg
+		w.Imported[checkName+"_test"] = xpkg
 		conf.XPkg = xpkg
 	}
 	return
@@ -484,8 +551,13 @@ type Importer struct {
 
 func (im *Importer) Import(name string) (pkg *types.Package, err error) {
 	if im.conf.AllowBinary && im.w.isBinaryPkg(name) {
+		if found := im.w.Imported[name]; found != nil {
+			return found, nil
+		}
 		pkg, err = im.w.gcimported.Import(name)
 		if pkg != nil && pkg.Complete() {
+			im.w.Imported[name] = pkg
+			im.w.Updated = append(im.w.Updated, name)
 			return
 		}
 		//		pkg = im.w.gcimporter[name]
@@ -507,24 +579,32 @@ func (w *PkgWalker) parseFile(dir, file string, src interface{}) (*ast.File, err
 
 func (w *PkgWalker) parseFileEx(dir, file string, src interface{}, findDoc bool) (*ast.File, error) {
 	filename := filepath.Join(dir, file)
-	f, _ := w.parsedFileCache[filename]
+	var f *ast.File
+	if src == nil {
+		f, _ = w.parsedFileCache[filename]
+	}
 	if f != nil {
-		return f, nil
+		if i, ok := w.parsedFileInfo[filename]; ok {
+			info, err := os.Stat(filename)
+			if err == nil && info.ModTime() == i {
+				return f, nil
+			}
+		}
 	}
 
 	var err error
 
 	// generate missing context-dependent files.
-	if w.context != nil && file == fmt.Sprintf("zgoos_%s.go", w.context.GOOS) {
-		src := fmt.Sprintf("package runtime; const theGoos = `%s`", w.context.GOOS)
+	if w.Context != nil && file == fmt.Sprintf("zgoos_%s.go", w.Context.GOOS) {
+		src := fmt.Sprintf("package runtime; const theGoos = `%s`", w.Context.GOOS)
 		f, err = parser.ParseFile(w.fset, filename, src, 0)
 		if err != nil {
 			fmt.Fprintf(w.cmd.Stderr, "incorrect generated file: %s", err)
 		}
 	}
 
-	if w.context != nil && file == fmt.Sprintf("zgoarch_%s.go", w.context.GOARCH) {
-		src := fmt.Sprintf("package runtime; const theGoarch = `%s`", w.context.GOARCH)
+	if w.Context != nil && file == fmt.Sprintf("zgoarch_%s.go", w.Context.GOARCH) {
+		src := fmt.Sprintf("package runtime; const theGoarch = `%s`", w.Context.GOARCH)
 		f, err = parser.ParseFile(w.fset, filename, src, 0)
 		if err != nil {
 			fmt.Fprintf(w.cmd.Stderr, "incorrect generated file: %s", err)
@@ -541,7 +621,10 @@ func (w *PkgWalker) parseFileEx(dir, file string, src interface{}, findDoc bool)
 			return f, err
 		}
 	}
-
+	info, err := os.Stat(filename)
+	if err == nil {
+		w.parsedFileInfo[filename] = info.ModTime()
+	}
 	w.parsedFileCache[filename] = f
 	return f, nil
 }
@@ -622,7 +705,7 @@ func (w *PkgWalker) LookupImport(pkg *types.Package, pkgInfo *types.Info, cursor
 	if typesFindDef {
 		var findpath string = fpath
 		//check imported and vendor
-		for _, v := range w.imported {
+		for _, v := range w.Imported {
 			vpath := v.Path()
 			pos := strings.Index(vpath, "/vendor/")
 			if pos >= 0 {
@@ -731,7 +814,7 @@ func (w *PkgWalker) LookupStructFromField(info *types.Info, cursorPkg *types.Pac
 				Defs: make(map[*ast.Ident]types.Object),
 			},
 		}
-		w.imported[cursorPkg.Path()] = nil
+		w.Imported[cursorPkg.Path()] = nil
 		pkg, _ := w.Import("", cursorPkg.Path(), conf)
 		if pkg != nil {
 			info = conf.Info
@@ -1208,7 +1291,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		cursorPkgPath = pkgutil.VendorPathToImportPath(cursorPkgPath)
 	}
 
-	buildutil.ForEachPackage(w.context, func(importPath string, err error) {
+	buildutil.ForEachPackage(w.Context, func(importPath string, err error) {
 		if err != nil {
 			return
 		}
@@ -1240,7 +1323,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		}
 	})
 
-	w.imported = make(map[string]*types.Package)
+	w.Imported = make(map[string]*types.Package)
 	for _, v := range uses_paths {
 		conf := &PkgConfig{
 			IgnoreFuncBodies: false,
@@ -1253,7 +1336,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 				Uses: make(map[*ast.Ident]types.Object),
 			},
 		}
-		w.imported[v] = nil
+		w.Imported[v] = nil
 		var usages []int
 		vpkg, _ := w.Import("", v, conf)
 		if vpkg != nil && vpkg != pkg {
