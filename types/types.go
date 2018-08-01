@@ -413,11 +413,9 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 	if pkg != nil {
 		if t, ok := w.ImportedMod[name]; ok {
 			if t == lastMod {
-				log.Println("skip pkg", name, t)
 				return pkg, nil
 			}
 		}
-		log.Println("parsed", name)
 	}
 
 	if typesVerbose {
@@ -525,10 +523,9 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 			}
 		},
 	}
-	if pkg == nil {
-		pkg, err = typesConf.Check(checkName, w.fset, files, conf.Info)
-		conf.Pkg = pkg
-	}
+
+	pkg, err = typesConf.Check(checkName, w.fset, files, conf.Info)
+	conf.Pkg = pkg
 
 	w.importingName[checkName] = false
 	w.Imported[name] = pkg
@@ -579,21 +576,19 @@ func (w *PkgWalker) parseFile(dir, file string, src interface{}) (*ast.File, err
 
 func (w *PkgWalker) parseFileEx(dir, file string, src interface{}, findDoc bool) (*ast.File, error) {
 	filename := filepath.Join(dir, file)
-	var f *ast.File
 	if src == nil {
-		f, _ = w.parsedFileCache[filename]
-	}
-	if f != nil {
-		if i, ok := w.parsedFileInfo[filename]; ok {
-			info, err := os.Stat(filename)
-			if err == nil && info.ModTime() == i {
-				return f, nil
+		if f, ok := w.parsedFileCache[filename]; ok {
+			if i, ok := w.parsedFileInfo[filename]; ok {
+				info, err := os.Stat(filename)
+				if err == nil && info.ModTime() == i {
+					return f, nil
+				}
 			}
 		}
 	}
 
+	var f *ast.File
 	var err error
-
 	// generate missing context-dependent files.
 	if w.Context != nil && file == fmt.Sprintf("zgoos_%s.go", w.Context.GOOS) {
 		src := fmt.Sprintf("package runtime; const theGoos = `%s`", w.Context.GOOS)
