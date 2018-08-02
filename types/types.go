@@ -221,7 +221,7 @@ func runTypes(cmd *command.Command, args []string) error {
 				Selections: make(map[*ast.SelectorExpr]*types.Selection),
 			}
 		}
-		pkg, _, err := w.Check(pkgName, conf)
+		pkg, err := w.Check(pkgName, conf)
 		if pkg == nil {
 			return fmt.Errorf("error import path %v", err)
 		}
@@ -281,7 +281,6 @@ type PkgWalker struct {
 	parsedFileMod   map[string]int64
 	Imported        map[string]*types.Package // packages already imported
 	ImportedMod     map[string]int64
-	Updated         []string
 	gcimported      types.Importer
 	cursor          *FileCursor
 	cmd             *command.Command
@@ -294,7 +293,7 @@ func DefaultPkgConfig() *PkgConfig {
 	return conf
 }
 
-func (p *PkgWalker) Check(name string, conf *PkgConfig) (pkg *types.Package, updated []string, err error) {
+func (p *PkgWalker) Check(name string, conf *PkgConfig) (pkg *types.Package, err error) {
 	if name == "." {
 		name, _ = os.Getwd()
 	}
@@ -307,9 +306,7 @@ func (p *PkgWalker) Check(name string, conf *PkgConfig) (pkg *types.Package, upd
 
 	p.Imported[name] = nil
 	p.importingName = make(map[string]bool)
-	p.Updated = []string{}
 	pkg, err = p.Import("", name, conf)
-	updated = p.Updated
 	return
 }
 
@@ -530,7 +527,6 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 	w.importingName[checkName] = false
 	w.Imported[name] = pkg
 	w.ImportedMod[name] = lastMod
-	w.Updated = append(w.Updated, name)
 
 	if len(xfiles) > 0 {
 		xpkg, _ := typesConf.Check(checkName+"_test", w.fset, xfiles, conf.XInfo)
@@ -554,7 +550,6 @@ func (im *Importer) Import(name string) (pkg *types.Package, err error) {
 		pkg, err = im.w.gcimported.Import(name)
 		if pkg != nil && pkg.Complete() {
 			im.w.Imported[name] = pkg
-			im.w.Updated = append(im.w.Updated, name)
 			return
 		}
 		//		pkg = im.w.gcimporter[name]
