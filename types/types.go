@@ -264,10 +264,10 @@ func NewPkgWalker(context *build.Context) *PkgWalker {
 		Context:         context,
 		fset:            token.NewFileSet(),
 		parsedFileCache: map[string]*ast.File{},
-		parsedFileInfo:  map[string]time.Time{},
+		parsedFileMod:   map[string]int64{},
 		importingName:   map[string]bool{},
 		Imported:        map[string]*types.Package{"unsafe": types.Unsafe},
-		ImportedMod:     map[string]time.Time{},
+		ImportedMod:     map[string]int64{},
 		gcimported:      importer.Default(),
 	}
 }
@@ -278,9 +278,9 @@ type PkgWalker struct {
 	current         *types.Package
 	importingName   map[string]bool
 	parsedFileCache map[string]*ast.File
-	parsedFileInfo  map[string]time.Time
+	parsedFileMod   map[string]int64
 	Imported        map[string]*types.Package // packages already imported
-	ImportedMod     map[string]time.Time
+	ImportedMod     map[string]int64
 	Updated         []string
 	gcimported      types.Importer
 	cursor          *FileCursor
@@ -351,16 +351,16 @@ func (w *PkgWalker) Import(parentDir string, name string, conf *PkgConfig) (pkg 
 	return w.ImportHelper(parentDir, name, "", conf)
 }
 
-func lastModTime(dir string, files []string) time.Time {
-	var lastTime time.Time
+func lastModTime(dir string, files []string) int64 {
+	var lastTime int64
 	for _, file := range files {
 		filename := filepath.Join(dir, file)
 		info, err := os.Lstat(filename)
 		if err != nil {
 			continue
 		}
-		t := info.ModTime()
-		if t.Unix() > lastTime.Unix() {
+		t := info.ModTime().UnixNano()
+		if t > lastTime {
 			lastTime = t
 		}
 	}
@@ -578,9 +578,9 @@ func (w *PkgWalker) parseFileEx(dir, file string, src interface{}, findDoc bool)
 	filename := filepath.Join(dir, file)
 	if src == nil {
 		if f, ok := w.parsedFileCache[filename]; ok {
-			if i, ok := w.parsedFileInfo[filename]; ok {
+			if i, ok := w.parsedFileMod[filename]; ok {
 				info, err := os.Stat(filename)
-				if err == nil && info.ModTime() == i {
+				if err == nil && info.ModTime().UnixNano() == i {
 					return f, nil
 				}
 			}
@@ -618,7 +618,7 @@ func (w *PkgWalker) parseFileEx(dir, file string, src interface{}, findDoc bool)
 	}
 	info, err := os.Stat(filename)
 	if err == nil {
-		w.parsedFileInfo[filename] = info.ModTime()
+		w.parsedFileMod[filename] = info.ModTime().UnixNano()
 	}
 	w.parsedFileCache[filename] = f
 	return f, nil
