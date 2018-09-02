@@ -1329,7 +1329,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		}
 	})
 
-	w.Imported = make(map[string]*types.Package)
+	//w.Imported = make(map[string]*types.Package)
 	for _, v := range uses_paths {
 		conf := &PkgConfig{
 			IgnoreFuncBodies: false,
