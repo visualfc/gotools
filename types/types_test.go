@@ -2,16 +2,30 @@ package types
 
 import (
 	"go/build"
-	"log"
+	"os"
 	"testing"
+
+	"github.com/visualfc/gotools/pkg/command"
 )
 
+func testCommand() *command.Command {
+	cmd := &command.Command{}
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	return cmd
+}
+
 func TestTypes(t *testing.T) {
+	typesFindInfo = true
+	typesFindDoc = true
+	typesFindDef = true
 	w := NewPkgWalker(&build.Default)
+	w.cmd = testCommand()
 	conf := DefaultPkgConfig()
-	conf.Cursor = NewFileCursor(nil, "types.go", 100)
-	w.Check(".", conf)
-	for _, v := range w.Imported {
-		log.Println(v.Name(), v.Path())
+	conf.Cursor = NewFileCursor(nil, "types_test.go", 325)
+	pkg, err := w.Check(".", conf)
+	if err != nil {
+		t.Fatalf("error %v\n", err)
 	}
+	w.LookupCursor(pkg, conf, conf.Cursor)
 }
