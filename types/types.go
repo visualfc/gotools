@@ -1080,6 +1080,18 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 					if na != nil {
 						fieldTypeObj = na.Obj()
 					}
+					//check current pkg
+					if fieldTypeObj != nil && fieldTypeObj.Pkg() == pkg {
+						cursorPkg = fieldTypeObj.Pkg()
+						if t, ok := fieldTypeObj.Type().Underlying().(*types.Struct); ok {
+							for i := 0; i < t.NumFields(); i++ {
+								if t.Field(i).Id() == cursorObj.Id() {
+									cursorPos = t.Field(i).Pos()
+									break
+								}
+							}
+						}
+					}
 				}
 			}
 		}
