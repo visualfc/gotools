@@ -205,6 +205,10 @@ func runTypes(cmd *command.Command, args []string) error {
 			}
 			pkgName = pkgPath
 		}
+		if cursor.src != nil {
+			w.UpdateSourceData(filepath.Join(pkgName, cursor.fileName), cursor.src)
+		}
+
 		conf := &PkgConfig{IgnoreFuncBodies: true, AllowBinary: true, WithTestFiles: true}
 		if cursor != nil {
 			cursor.pkgName = pkgName
@@ -273,11 +277,17 @@ func NewPkgWalker(context *build.Context) *PkgWalker {
 		fset:            token.NewFileSet(),
 		parsedFileCache: map[string]*ast.File{},
 		parsedFileMod:   map[string]int64{},
+		fileSourceData:  map[string]*SourceData{},
 		importingName:   map[string]bool{},
 		Imported:        map[string]*types.Package{"unsafe": types.Unsafe},
 		ImportedMod:     map[string]int64{},
 		gcimported:      importer.Default(),
 	}
+}
+
+type SourceData struct {
+	data  interface{}
+	mtime int64
 }
 
 type PkgWalker struct {
@@ -287,12 +297,17 @@ type PkgWalker struct {
 	importingName   map[string]bool
 	parsedFileCache map[string]*ast.File
 	parsedFileMod   map[string]int64
+	fileSourceData  map[string]*SourceData
 	Imported        map[string]*types.Package // packages already imported
 	ImportedMod     map[string]int64
 	gcimported      types.Importer
 	cursor          *FileCursor
 	cmd             *command.Command
 	mod             *gomod.ModuleList
+}
+
+func (w *PkgWalker) UpdateSourceData(filename string, data interface{}) {
+	w.fileSourceData[filename] = &SourceData{data, time.Now().UnixNano()}
 }
 
 func DefaultPkgConfig() *PkgConfig {
@@ -485,7 +500,7 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 
 	if conf.Cursor != nil && conf.Cursor.fileName != "" {
 		cursor := conf.Cursor
-		f, _ := w.parseFileEx(bp.Dir, cursor.fileName, cursor.src, cursor.mtime, true)
+		f, _ := w.parseFile(bp.Dir, cursor.fileName)
 		if f != nil {
 			cursor.pos = token.Pos(w.fset.File(f.Pos()).Base()) + token.Pos(cursor.cursorPos)
 			cursor.fileDir = bp.Dir
@@ -515,13 +530,11 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 		fileMap = make(map[string]*ast.File)
 		for _, file := range filenames {
 			var f *ast.File
+			f, err = w.parseFile(bp.Dir, file)
 			if cursor != nil && cursor.fileName == file {
-				f, err = w.parseFileEx(bp.Dir, file, cursor.src, cursor.mtime, true)
 				cursor.pos = token.Pos(w.fset.File(f.Pos()).Base()) + token.Pos(cursor.cursorPos)
 				cursor.fileDir = bp.Dir
 				cursor.xtest = xtest
-			} else {
-				f, err = w.parseFile(bp.Dir, file)
 			}
 			if err != nil && typesVerbose {
 				fmt.Fprintln(w.cmd.Stderr, err)
@@ -592,14 +605,18 @@ func (im *Importer) Import(name string) (pkg *types.Package, err error) {
 }
 
 func (w *PkgWalker) parseFile(dir, file string) (*ast.File, error) {
-	return w.parseFileEx(dir, file, nil, -1, typesFindDoc)
+	return w.parseFileEx(dir, file, nil, 0, typesFindDoc)
 }
 
 func (w *PkgWalker) parseFileEx(dir, file string, src interface{}, mtime int64, findDoc bool) (*ast.File, error) {
 	filename := filepath.Join(dir, file)
+	if sd, ok := w.fileSourceData[filename]; ok {
+		src = sd.data
+		mtime = sd.mtime
+	}
 	if f, ok := w.parsedFileCache[filename]; ok {
 		if i, ok := w.parsedFileMod[filename]; ok {
-			if mtime != -1 && mtime == i {
+			if mtime != 0 && mtime == i {
 				return f, nil
 			}
 			info, err := os.Stat(filename)
@@ -608,7 +625,6 @@ func (w *PkgWalker) parseFileEx(dir, file string, src interface{}, mtime int64, 
 			}
 		}
 	}
-
 	var f *ast.File
 	var err error
 	// generate missing context-dependent files.
@@ -638,7 +654,7 @@ func (w *PkgWalker) parseFileEx(dir, file string, src interface{}, mtime int64, 
 			return f, err
 		}
 	}
-	if mtime != -1 {
+	if mtime != 0 {
 		w.parsedFileMod[filename] = mtime
 	} else {
 		info, err := os.Stat(filename)
@@ -1024,7 +1040,6 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		//TODO
 		return nil
 	}
-
 	if kind == ObjField {
 		if cursorObj.(*types.Var).Anonymous() {
 			typ := orgType(cursorObj.Type())
@@ -1412,7 +1427,7 @@ func (w *PkgWalker) CheckIsName(cursor *FileCursor) *ast.Ident {
 	if cursor.fileDir == "" {
 		return nil
 	}
-	file, _ := w.parseFileEx(cursor.fileDir, cursor.fileName, cursor.src, cursor.mtime, true)
+	file, _ := w.parseFile(cursor.fileDir, cursor.fileName)
 	if file == nil {
 		return nil
 	}
@@ -1426,7 +1441,7 @@ func (w *PkgWalker) CheckIsImport(cursor *FileCursor) *ast.ImportSpec {
 	if cursor.fileDir == "" {
 		return nil
 	}
-	file, _ := w.parseFileEx(cursor.fileDir, cursor.fileName, cursor.src, cursor.mtime, true)
+	file, _ := w.parseFile(cursor.fileDir, cursor.fileName)
 	if file == nil {
 		return nil
 	}
