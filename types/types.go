@@ -440,7 +440,7 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 		return nil, err
 	}
 	GoFiles := append(append([]string{}, bp.GoFiles...), bp.CgoFiles...)
-	XTestFiles := append([]string{}, bp.XTestGoFiles...)
+	XTestGoFiles := append([]string{}, bp.XTestGoFiles...)
 
 	if conf.WithTestFiles {
 		GoFiles = append(GoFiles, bp.TestGoFiles...)
@@ -519,7 +519,7 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 				return append(filenames, file)
 			}
 			if isXTest {
-				XTestFiles = checkAppend(XTestFiles, cursor.fileName)
+				XTestGoFiles = checkAppend(XTestGoFiles, cursor.fileName)
 			} else {
 				GoFiles = checkAppend(GoFiles, cursor.fileName)
 			}
@@ -547,7 +547,7 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 	var files []*ast.File
 	var xfiles []*ast.File
 	files, conf.Files = parserFiles(GoFiles, conf.Cursor, false)
-	xfiles, conf.XTestFiles = parserFiles(bp.XTestGoFiles, conf.Cursor, true)
+	xfiles, conf.XTestFiles = parserFiles(XTestGoFiles, conf.Cursor, true)
 
 	typesConf := types.Config{
 		IgnoreFuncBodies: conf.IgnoreFuncBodies,
