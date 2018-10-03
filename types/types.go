@@ -510,18 +510,18 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 				isXTest = true
 			}
 			cursor.xtest = isXTest
-			checkAppend := func(filenames []string, file string) []string {
+			checkInsert := func(filenames []string, file string) []string {
 				for _, f := range filenames {
 					if f == file {
 						return filenames
 					}
 				}
-				return append(filenames, file)
+				return append([]string{file}, filenames...)
 			}
 			if isXTest {
-				XTestGoFiles = checkAppend(XTestGoFiles, cursor.fileName)
+				XTestGoFiles = checkInsert(XTestGoFiles, cursor.fileName)
 			} else {
-				GoFiles = checkAppend(GoFiles, cursor.fileName)
+				GoFiles = checkInsert(GoFiles, cursor.fileName)
 			}
 		}
 	}
