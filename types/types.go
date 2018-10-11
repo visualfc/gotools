@@ -273,15 +273,15 @@ type PkgConfig struct {
 
 func NewPkgWalker(context *build.Context) *PkgWalker {
 	return &PkgWalker{
-		Context:         context,
-		fset:            token.NewFileSet(),
-		parsedFileCache: map[string]*ast.File{},
-		parsedFileMod:   map[string]int64{},
-		fileSourceData:  map[string]*SourceData{},
-		importingName:   map[string]bool{},
-		Imported:        map[string]*types.Package{"unsafe": types.Unsafe},
-		ImportedMod:     map[string]int64{},
-		gcimported:      importer.Default(),
+		Context:           context,
+		fset:              token.NewFileSet(),
+		parsedFileCache:   map[string]*ast.File{},
+		parsedFileModTime: map[string]int64{},
+		fileSourceData:    map[string]*SourceData{},
+		importingName:     map[string]bool{},
+		Imported:          map[string]*types.Package{"unsafe": types.Unsafe},
+		ImportedModTime:   map[string]int64{},
+		gcimported:        importer.Default(),
 	}
 }
 
@@ -291,19 +291,19 @@ type SourceData struct {
 }
 
 type PkgWalker struct {
-	fset            *token.FileSet
-	Context         *build.Context
-	current         *types.Package
-	importingName   map[string]bool
-	parsedFileCache map[string]*ast.File
-	parsedFileMod   map[string]int64
-	fileSourceData  map[string]*SourceData
-	Imported        map[string]*types.Package // packages already imported
-	ImportedMod     map[string]int64
-	gcimported      types.Importer
-	cursor          *FileCursor
-	cmd             *command.Command
-	mod             *gomod.ModuleList
+	fset              *token.FileSet
+	Context           *build.Context
+	current           *types.Package
+	importingName     map[string]bool
+	parsedFileCache   map[string]*ast.File
+	parsedFileModTime map[string]int64
+	fileSourceData    map[string]*SourceData
+	Imported          map[string]*types.Package // packages already imported
+	ImportedModTime   map[string]int64
+	gcimported        types.Importer
+	cursor            *FileCursor
+	cmd               *command.Command
+	mod               *gomod.ModuleList
 }
 
 func (w *PkgWalker) UpdateSourceData(filename string, data interface{}) {
@@ -449,7 +449,7 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 	pkg = w.Imported[name]
 	lastMod := lastModTime(bp.Dir, GoFiles)
 	if pkg != nil {
-		if t, ok := w.ImportedMod[name]; ok {
+		if t, ok := w.ImportedModTime[name]; ok {
 			if t == lastMod {
 				return pkg, nil
 			}
@@ -565,7 +565,7 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 
 	w.importingName[checkName] = false
 	w.Imported[name] = pkg
-	w.ImportedMod[name] = lastMod
+	w.ImportedModTime[name] = lastMod
 
 	if len(xfiles) > 0 {
 		xpkg, _ := typesConf.Check(checkName+"_test", w.fset, xfiles, conf.XInfo)
@@ -615,7 +615,7 @@ func (w *PkgWalker) parseFileEx(dir, file string, src interface{}, mtime int64, 
 		mtime = sd.mtime
 	}
 	if f, ok := w.parsedFileCache[filename]; ok {
-		if i, ok := w.parsedFileMod[filename]; ok {
+		if i, ok := w.parsedFileModTime[filename]; ok {
 			if mtime != 0 && mtime == i {
 				return f, nil
 			}
@@ -655,11 +655,11 @@ func (w *PkgWalker) parseFileEx(dir, file string, src interface{}, mtime int64, 
 		}
 	}
 	if mtime != 0 {
-		w.parsedFileMod[filename] = mtime
+		w.parsedFileModTime[filename] = mtime
 	} else {
 		info, err := os.Stat(filename)
 		if err == nil {
-			w.parsedFileMod[filename] = info.ModTime().UnixNano()
+			w.parsedFileModTime[filename] = info.ModTime().UnixNano()
 		}
 	}
 	w.parsedFileCache[filename] = f
