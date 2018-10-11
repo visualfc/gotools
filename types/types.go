@@ -24,9 +24,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/visualfc/fastmod"
 	"github.com/visualfc/gotools/pkg/buildctx"
 	"github.com/visualfc/gotools/pkg/command"
-	"github.com/visualfc/gotools/pkg/gomod"
 	"github.com/visualfc/gotools/pkg/pkgutil"
 	"github.com/visualfc/gotools/pkg/stdlib"
 	"golang.org/x/tools/go/buildutil"
@@ -282,6 +282,7 @@ func NewPkgWalker(context *build.Context) *PkgWalker {
 		Imported:          map[string]*types.Package{"unsafe": types.Unsafe},
 		ImportedModTime:   map[string]int64{},
 		gcimported:        importer.Default(),
+		modList:           fastmod.NewModuleList(context),
 	}
 }
 
@@ -303,7 +304,8 @@ type PkgWalker struct {
 	gcimported        types.Importer
 	cursor            *FileCursor
 	cmd               *command.Command
-	mod               *gomod.ModuleList
+	mod               *fastmod.Module
+	modList           *fastmod.ModuleList
 }
 
 func (w *PkgWalker) UpdateSourceData(filename string, data interface{}) {
@@ -367,8 +369,8 @@ func (w *PkgWalker) importPath(path string, mode build.ImportMode) (*build.Packa
 	}
 	//check mod
 	if w.mod != nil {
-		module, _, dir := w.mod.LookupModule(path)
-		if module != nil {
+		_, dir := w.mod.Lookup(path)
+		if dir != "" {
 			pkg, err := w.Context.ImportDir(dir, mode)
 			if pkg != nil {
 				pkg.ImportPath = path
@@ -428,9 +430,9 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 
 	// parser cursor mod
 	if filepath.IsAbs(name) {
-		w.mod = gomod.LooupModList(name)
+		w.mod, _ = w.modList.LoadModule(name)
 		if typesVerbose && w.mod != nil {
-			log.Println("parser mod", w.mod.Module)
+			log.Println("parser mod", w.mod.ModFile())
 		}
 	}
 
