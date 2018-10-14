@@ -259,16 +259,17 @@ func NewFileCursor(src interface{}, filename string, pos int) *FileCursor {
 }
 
 type PkgConfig struct {
-	IgnoreFuncBodies bool
-	AllowBinary      bool
-	WithTestFiles    bool
-	Cursor           *FileCursor
 	Pkg              *types.Package
 	XPkg             *types.Package
 	Info             *types.Info
 	XInfo            *types.Info
+	Bpkg             *build.Package
+	Cursor           *FileCursor
 	Files            map[string]*ast.File
 	XTestFiles       map[string]*ast.File
+	IgnoreFuncBodies bool
+	AllowBinary      bool
+	WithTestFiles    bool
 }
 
 func NewPkgWalker(context *build.Context) *PkgWalker {
@@ -441,6 +442,8 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 	if bp == nil {
 		return nil, err
 	}
+	conf.Bpkg = bp
+
 	GoFiles := append(append([]string{}, bp.GoFiles...), bp.CgoFiles...)
 	XTestGoFiles := append([]string{}, bp.XTestGoFiles...)
 
@@ -1347,40 +1350,92 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		cursorPkgPath = pkgutil.VendorPathToImportPath(cursorPkgPath)
 	}
 
-	buildutil.ForEachPackage(w.Context, func(importPath string, err error) {
-		if err != nil {
-			return
-		}
-		if importPath == conf.Pkg.Path() {
-			return
-		}
-		bp, err := w.importPath(importPath, 0)
-		if err != nil {
-			return
-		}
-		find := false
-		if bp.ImportPath == cursorPkg.Path() {
-			find = true
-		} else {
+	// check on module dir
+	if w.mod != nil {
+		dir := w.mod.ModDir()
+		filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+			if !info.IsDir() {
+				return nil
+			}
+			if path != dir && info.Name() == "vendor" {
+				return filepath.SkipDir
+			}
+			if conf.Bpkg.Dir == path {
+				return nil
+			}
+			bp, err := w.importPath(path, 0)
+			if err != nil {
+				return nil
+			}
+			if !bp.IsCommand() {
+				importPath := filepath.Join(w.mod.Path(), path[len(dir)+1:])
+				if importPath == cursorPkgPath {
+					return nil
+				}
+			}
+			find := false
 			for _, v := range bp.Imports {
 				if v == cursorPkgPath {
 					find = true
 					break
 				}
 			}
-		}
-		if find {
-			for _, v := range uses_paths {
-				if v == bp.ImportPath {
-					return
+			if find {
+				importPath := path //filepath.Join(w.mod.Path(), path[len(dir)+1:])
+				for _, v := range uses_paths {
+					if v == importPath {
+						return nil
+					}
 				}
+				uses_paths = append(uses_paths, importPath)
 			}
-			if typesFindSkipGoroot && bp.Goroot {
+			return nil
+		})
+	}
+	ctx := *w.Context
+	searchAll := true
+	if w.mod != nil {
+		ctx.GOPATH = ""
+		if typesFindSkipGoroot {
+			searchAll = false
+		}
+	}
+	if searchAll {
+		buildutil.ForEachPackage(&ctx, func(importPath string, err error) {
+			if err != nil {
 				return
 			}
-			uses_paths = append(uses_paths, bp.ImportPath)
-		}
-	})
+			if importPath == conf.Pkg.Path() {
+				return
+			}
+			bp, err := w.importPath(importPath, 0)
+			if err != nil {
+				return
+			}
+			find := false
+			if bp.ImportPath == cursorPkg.Path() {
+				find = true
+			} else {
+				for _, v := range bp.Imports {
+					if v == cursorPkgPath {
+						find = true
+						break
+					}
+				}
+			}
+			if find {
+				for _, v := range uses_paths {
+					if v == bp.ImportPath {
+						return
+					}
+				}
+				if typesFindSkipGoroot && bp.Goroot {
+					return
+				}
+				uses_paths = append(uses_paths, bp.ImportPath)
+			}
+		})
+	}
 
 	//w.Imported = make(map[string]*types.Package)
 	for _, v := range uses_paths {
