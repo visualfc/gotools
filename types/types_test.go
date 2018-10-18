@@ -15,7 +15,7 @@ func testCommand() *command.Command {
 	return cmd
 }
 
-func TestTypes(t *testing.T) {
+func _TestTypes(t *testing.T) {
 	typesFindInfo = true
 	typesFindDoc = true
 	typesFindDef = true

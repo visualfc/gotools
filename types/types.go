@@ -15,7 +15,6 @@ import (
 	"go/token"
 	"go/types"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -283,7 +282,6 @@ func NewPkgWalker(context *build.Context) *PkgWalker {
 		Imported:          map[string]*types.Package{"unsafe": types.Unsafe},
 		ImportedModTime:   map[string]int64{},
 		gcimported:        importer.Default(),
-		modList:           fastmod.NewModuleList(context),
 	}
 }
 
@@ -305,8 +303,7 @@ type PkgWalker struct {
 	gcimported        types.Importer
 	cursor            *FileCursor
 	cmd               *command.Command
-	mod               *fastmod.Module
-	modList           *fastmod.ModuleList
+	modPkg            *fastmod.Package
 }
 
 func (w *PkgWalker) UpdateSourceData(filename string, data interface{}) {
@@ -344,7 +341,22 @@ func (p *PkgWalker) Check(name string, conf *PkgConfig) (pkg *types.Package, err
 
 	p.Imported[name] = nil
 	p.importingName = make(map[string]bool)
-	pkg, err = p.Import("", name, conf)
+	p.modPkg = nil
+	// check mod
+	var import_path string
+	if filepath.IsAbs(name) {
+		p.modPkg, _ = fastmod.LoadPackage(name, p.Context)
+		if p.modPkg != nil {
+			dir := filepath.ToSlash(p.modPkg.Node().ModDir())
+			fname := filepath.ToSlash(name)
+			if dir == fname {
+				import_path = p.modPkg.Node().Path()
+			} else if strings.HasPrefix(fname, dir+"/") {
+				import_path = p.modPkg.Node().Path() + fname[len(dir):]
+			}
+		}
+	}
+	pkg, err = p.ImportHelper("", name, import_path, conf)
 	return
 }
 
@@ -361,20 +373,19 @@ func (w *PkgWalker) isBinaryPkg(pkg string) bool {
 	return stdlib.IsStdPkg(pkg)
 }
 
-func (w *PkgWalker) importPath(path string, mode build.ImportMode) (*build.Package, error) {
+func (w *PkgWalker) importPath(parentDir string, path string, mode build.ImportMode) (*build.Package, error) {
 	if filepath.IsAbs(path) {
 		return w.Context.ImportDir(path, 0)
 	}
 	if stdlib.IsStdPkg(path) {
 		return stdlib.ImportStdPkg(w.Context, path, build.AllowBinary)
 	}
-	//check mod
-	if w.mod != nil {
-		_, dir := w.mod.Lookup(path)
+	if w.modPkg != nil {
+		_path, dir, _ := w.modPkg.Lookup(path)
 		if dir != "" {
 			pkg, err := w.Context.ImportDir(dir, mode)
 			if pkg != nil {
-				pkg.ImportPath = path
+				pkg.ImportPath = _path
 			}
 			return pkg, err
 		}
@@ -419,29 +430,24 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 	if parentDir != "" {
 		if strings.HasPrefix(name, ".") {
 			name = filepath.Join(parentDir, name)
-		} else if pkgutil.IsVendorExperiment() {
-			parentPkg := pkgutil.ImportDirEx(w.Context, parentDir)
-			var err error
-			name, err = pkgutil.VendoredImportPath(parentPkg, name)
-			if err != nil {
-				return nil, err
+		} else {
+			if pkgutil.IsVendorExperiment() {
+				parentPkg := pkgutil.ImportDirEx(w.Context, parentDir)
+				var err error
+				name, err = pkgutil.VendoredImportPath(parentPkg, name)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
 
-	// parser cursor mod
-	if filepath.IsAbs(name) {
-		w.mod, _ = w.modList.LoadModule(name)
-		if typesVerbose && w.mod != nil {
-			log.Println("parser mod", w.mod.ModFile())
-		}
-	}
-
-	bp, err := w.importPath(name, 0)
+	bp, err := w.importPath(parentDir, name, 0)
 
 	if bp == nil {
 		return nil, err
 	}
+
 	conf.Bpkg = bp
 
 	GoFiles := append(append([]string{}, bp.GoFiles...), bp.CgoFiles...)
@@ -758,7 +764,7 @@ func (w *PkgWalker) LookupImport(pkg *types.Package, pkgInfo *types.Info, cursor
 				break
 			}
 		}
-		bp, err = w.importPath(findpath, build.FindOnly)
+		bp, err = w.importPath("", findpath, build.FindOnly)
 		if err == nil {
 			w.cmd.Println(w.fset.Position(is.Pos()).String() + "::" + fname + "::" + fpath + "::" + bp.Dir)
 		} else {
@@ -1116,9 +1122,9 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			}
 		}
 	}
-	if typesVerbose {
-		w.cmd.Println("parser", cursorObj, kind, cursorIsInterfaceMethod)
-	}
+	//	if typesVerbose {
+	//		w.cmd.Println("parser", cursorObj, kind, cursorIsInterfaceMethod)
+	//	}
 	if cursorPkg != nil && cursorPkg != pkg &&
 		kind != ObjPkgName && w.isBinaryPkg(cursorPkg.Path()) {
 		conf := &PkgConfig{
@@ -1333,10 +1339,11 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 
 	var find_def_pkg string
 	var uses_paths []string
+
 	if cursorPkg.Path() != pkg_path && cursorPkg.Path() != xpkg_path {
 		find_def_pkg = cursorPkg.Path()
 		if typesFindSkipGoroot {
-			bp, err := w.importPath(find_def_pkg, 0)
+			bp, err := w.importPath(conf.Bpkg.Dir, find_def_pkg, 0)
 			if err == nil && !bp.Goroot {
 				uses_paths = append(uses_paths, find_def_pkg)
 			}
@@ -1346,13 +1353,12 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 	}
 
 	cursorPkgPath := cursorObj.Pkg().Path()
-	if pkgutil.IsVendorExperiment() {
+	if w.modPkg == nil && pkgutil.IsVendorExperiment() {
 		cursorPkgPath = pkgutil.VendorPathToImportPath(cursorPkgPath)
 	}
-
 	// check on module dir
-	if w.mod != nil {
-		dir := w.mod.ModDir()
+	if w.modPkg != nil {
+		dir := w.modPkg.Node().ModDir()
 		filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 			if !info.IsDir() {
 				return nil
@@ -1363,12 +1369,12 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			if conf.Bpkg.Dir == path {
 				return nil
 			}
-			bp, err := w.importPath(path, 0)
+			bp, err := w.importPath(dir, path, 0)
 			if err != nil {
 				return nil
 			}
 			if !bp.IsCommand() {
-				importPath := filepath.Join(w.mod.Path(), path[len(dir)+1:])
+				importPath := filepath.Join(w.modPkg.Node().Path(), path[len(dir)+1:])
 				if importPath == cursorPkgPath {
 					return nil
 				}
@@ -1394,7 +1400,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 	}
 	ctx := *w.Context
 	searchAll := true
-	if w.mod != nil {
+	if w.modPkg != nil {
 		ctx.GOPATH = ""
 		if typesFindSkipGoroot {
 			searchAll = false
@@ -1408,7 +1414,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			if importPath == conf.Pkg.Path() {
 				return
 			}
-			bp, err := w.importPath(importPath, 0)
+			bp, err := w.importPath("", importPath, 0)
 			if err != nil {
 				return
 			}
