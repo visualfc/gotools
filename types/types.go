@@ -14,6 +14,7 @@ import (
 	"go/printer"
 	"go/token"
 	"go/types"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -304,6 +305,13 @@ type PkgWalker struct {
 	cursor            *FileCursor
 	cmd               *command.Command
 	modPkg            *fastmod.Package
+}
+
+func (w *PkgWalker) SetOutput(stdout io.Writer, stderr io.Writer) {
+	cmd := &command.Command{}
+	cmd.Stderr = stdout
+	cmd.Stdout = stderr
+	w.cmd = cmd
 }
 
 func (w *PkgWalker) UpdateSourceData(filename string, data interface{}) {
