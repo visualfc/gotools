@@ -61,8 +61,7 @@ type Mod struct {
 	Replace *Version
 }
 
-// check mod path
-func (m *Mod) Path() string {
+func (m *Mod) VersionPath() string {
 	v := m.Require
 	if m.Replace != nil {
 		v = m.Replace
@@ -73,8 +72,7 @@ func (m *Mod) Path() string {
 	return v.Path
 }
 
-// check mod path
-func (m *Mod) EncodePath() string {
+func (m *Mod) EncodeVersionPath() string {
 	v := m.Require
 	if m.Replace != nil {
 		v = m.Replace
@@ -148,12 +146,12 @@ func (m *Module) Lookup(pkg string) (path string, dir string, typ PkgType) {
 	var encpath string
 	for _, r := range m.mods {
 		if r.Require.Path == pkg {
-			path = r.Path()
-			encpath = r.EncodePath()
+			path = r.VersionPath()
+			encpath = r.EncodeVersionPath()
 			break
 		} else if strings.HasPrefix(pkg, r.Require.Path+"/") {
-			path = r.Path() + pkg[len(r.Require.Path):]
-			encpath = r.Path() + pkg[len(r.Require.Path):]
+			path = r.VersionPath() + pkg[len(r.Require.Path):]
+			encpath = r.VersionPath() + pkg[len(r.Require.Path):]
 			break
 		}
 	}
@@ -220,7 +218,12 @@ func (p *Package) Node() *Node {
 
 func (p *Package) load(node *Node) {
 	for _, v := range node.mods {
-		fmod := filepath.Join(filepath.Join(PkgModPath, v.EncodePath()), "go.mod")
+		var fmod string
+		if strings.HasPrefix(v.VersionPath(), "./") {
+			fmod = filepath.Join(node.ModDir(), v.VersionPath(), "go.mod")
+		} else {
+			fmod = filepath.Join(filepath.Join(PkgModPath, v.EncodeVersionPath()), "go.mod")
+		}
 		m, _ := p.mlist.LoadModuleFile(fmod)
 		if m != nil {
 			child := &Node{m, node, nil}
@@ -239,7 +242,7 @@ func (p *Package) lookup(node *Node, pkg string) (path string, dir string, typ P
 	for _, child := range node.Children {
 		path, dir, typ = p.lookup(child, pkg)
 		if dir != "" {
-			return
+			break
 		}
 	}
 	return
