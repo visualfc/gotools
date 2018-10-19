@@ -4,25 +4,14 @@ import (
 	"go/build"
 	"os"
 	"testing"
-
-	"github.com/visualfc/gotools/pkg/command"
 )
 
-func testCommand() *command.Command {
-	cmd := &command.Command{}
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	return cmd
-}
-
-func _TestTypes(t *testing.T) {
-	typesFindInfo = true
-	typesFindDoc = true
-	typesFindDef = true
+func TestTypes(t *testing.T) {
 	w := NewPkgWalker(&build.Default)
-	w.cmd = testCommand()
+	w.SetOutput(os.Stdout, os.Stderr)
+	w.SetFindMode(&FindMode{Info: true, Doc: true, Define: true})
 	conf := DefaultPkgConfig()
-	conf.Cursor = NewFileCursor(nil, "types_test.go", 325)
+	conf.Cursor = NewFileCursor(nil, "types_test.go", 138)
 	pkg, err := w.Check(".", conf)
 	if err != nil {
 		t.Fatalf("error %v\n", err)
