@@ -1,4 +1,4 @@
-// Copyright 2011-2015 visualfc <visualfc@gmail.com>. All rights reserved.
+// Copyright 2011-2018 visualfc <visualfc@gmail.com>. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -1054,7 +1054,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		kind = ObjImplicit
 	} else {
 		//TODO
-		return nil
+		return fmt.Errorf("nof find object %v:%v", cursor.fileName, cursor.pos)
 	}
 	if kind == ObjField {
 		if cursorObj.(*types.Var).Anonymous() {
