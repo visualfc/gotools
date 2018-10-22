@@ -324,8 +324,8 @@ func NewPkgWalker(context *build.Context) *PkgWalker {
 
 func (w *PkgWalker) SetOutput(stdout io.Writer, stderr io.Writer) {
 	cmd := &command.Command{}
-	cmd.Stderr = stdout
-	cmd.Stdout = stderr
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 	w.cmd = cmd
 }
 
