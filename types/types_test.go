@@ -12,13 +12,11 @@ func TestTypes(t *testing.T) {
 	w.SetFindMode(&FindMode{Info: true, Doc: true, Define: true})
 	conf := DefaultPkgConfig()
 	dir, _ := os.Getwd()
-	cursor := NewFileCursor(nil, dir, "types_test.go", 138)
+	cursor := NewFileCursor(nil, dir, "types_test.go", 126)
 	pkg, conf, err := w.Check(dir, conf, cursor)
 	if err != nil {
 		t.Fatalf("error %v\n", err)
 	}
-	w.LookupCursor(pkg, conf, cursor)
-	//	pkg, err = w.Check(".", conf)
 	w.LookupCursor(pkg, conf, cursor)
 }
 
@@ -38,7 +36,7 @@ func TestOS(t *testing.T) {
 		pkg, conf, _ := w.Check("os", conf, cursor)
 		w.LookupCursor(pkg, conf, cursor)
 	}
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 2; i++ {
 		fn1()
 		fn2()
 	}
