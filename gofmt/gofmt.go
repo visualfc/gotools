@@ -13,7 +13,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"sync"
 
 	"github.com/visualfc/gotools/pkg/command"
@@ -90,20 +89,17 @@ func runGofmt(cmd *command.Command, args []string) error {
 	}
 
 	if len(args) == 0 {
-		if err := processFile("<standard input>", cmd.Stdin, cmd.Stdout, true); err != nil {
-			return err
-		}
-	} else {
-		for _, path := range args {
-			switch dir, err := os.Stat(path); {
-			case err != nil:
+		return processFile("<standard input>", cmd.Stdin, cmd.Stdout, true)
+	}
+	for _, path := range args {
+		switch dir, err := os.Stat(path); {
+		case err != nil:
+			fmt.Fprintln(cmd.Stderr, err)
+		case dir.IsDir():
+			walkDir(path)
+		default:
+			if err := processFile(path, nil, cmd.Stdout, false); err != nil {
 				fmt.Fprintln(cmd.Stderr, err)
-			case dir.IsDir():
-				walkDir(path)
-			default:
-				if err := processFile(path, nil, cmd.Stdout, false); err != nil {
-					fmt.Fprintln(cmd.Stderr, err)
-				}
 			}
 		}
 	}
@@ -113,20 +109,17 @@ func runGofmt(cmd *command.Command, args []string) error {
 func isGoFile(f os.FileInfo) bool {
 	// ignore non-Go files
 	name := f.Name()
-	return !f.IsDir() && !strings.HasPrefix(name, ".") && strings.HasSuffix(name, ".go")
+	return !f.IsDir() && name[0] != '.' && filepath.Ext(name) == ".go"
 }
 
 func processFile(filename string, in io.Reader, out io.Writer, stdin bool) error {
+	var src []byte
+	var err error
 	if in == nil {
-		f, err := os.Open(filename)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		in = f
+		src, err = ioutil.ReadFile(filename)
+	} else {
+		src, err = ioutil.ReadAll(in)
 	}
-
-	src, err := ioutil.ReadAll(in)
 	if err != nil {
 		return err
 	}
@@ -148,21 +141,20 @@ func processFile(filename string, in io.Reader, out io.Writer, stdin bool) error
 			}
 		}
 		if gofmtDiff {
+			var data []byte
+			var err error
 			if gofmtUseGodiffLib {
-				data, err := godiff.UnifiedDiffString(string(src), string(res))
-				if err != nil {
-					return fmt.Errorf("computing diff: %s", err)
-				}
-				fmt.Fprintf(out, "diff %s gofmt/%s\n", filename, filename)
-				out.Write([]byte(data))
+				var dataTmp string // because godiff.UnifiedDiffString returns string
+				dataTmp, err = godiff.UnifiedDiffString(string(src), string(res))
+				data = []byte(dataTmp)
 			} else {
-				data, err := godiff.UnifiedDiffBytesByCmd(src, res)
-				if err != nil {
-					return fmt.Errorf("computing diff: %s", err)
-				}
-				fmt.Fprintf(out, "diff %s gofmt/%s\n", filename, filename)
-				out.Write(data)
+				data, err = godiff.UnifiedDiffBytesByCmd(src, res)
 			}
+			if err != nil {
+				return fmt.Errorf("computing diff: %s", err)
+			}
+			fmt.Fprintf(out, "diff %s gofmt/%s\n", filename, filename)
+			out.Write(data)
 		}
 	}
 
@@ -177,10 +169,7 @@ func visitFile(path string, f os.FileInfo, err error) error {
 	if err == nil && isGoFile(f) {
 		err = processFile(path, nil, os.Stdout, false)
 	}
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func walkDir(path string) {
