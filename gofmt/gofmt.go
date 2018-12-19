@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/visualfc/gotools/pkg/command"
@@ -109,7 +110,7 @@ func runGofmt(cmd *command.Command, args []string) error {
 func isGoFile(f os.FileInfo) bool {
 	// ignore non-Go files
 	name := f.Name()
-	return !f.IsDir() && name[0] != '.' && filepath.Ext(name) == ".go"
+	return !f.IsDir() && !strings.HasPrefix(name, ".") && strings.HasSuffix(name, ".go")
 }
 
 func processFile(filename string, in io.Reader, out io.Writer, stdin bool) error {
