@@ -11,6 +11,7 @@ import (
 	"github.com/visualfc/gotools/finddecl"
 	"github.com/visualfc/gotools/finddoc"
 	"github.com/visualfc/gotools/goapi"
+	"github.com/visualfc/gotools/godoc"
 	"github.com/visualfc/gotools/gofmt"
 	"github.com/visualfc/gotools/gopresent"
 	"github.com/visualfc/gotools/gotest"
@@ -41,11 +42,12 @@ func init() {
 	command.Register(terminal.Command)
 	command.Register(debugflags.Command)
 	command.Register(pkgcheck.Command)
+	command.Register(godoc.Command)
 }
 
 func main() {
 	command.AppName = "gotools"
-	command.AppVersion = "1.11"
+	command.AppVersion = "1.12"
 	command.AppInfo = "Go tools for liteide."
 	command.Main()
 }
