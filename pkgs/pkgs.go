@@ -53,8 +53,16 @@ func runPkgs(cmd *command.Command, args []string) error {
 		return os.ErrInvalid
 	}
 	//pkgIndexOnce.Do(loadPkgsList)
+	var flag LoadFlag
+	if pkgsStd {
+		flag = LoadGoroot
+	} else if pkgsSkipGoroot {
+		flag = LoadSkipGoroot
+	} else {
+		flag = LoadAll
+	}
 	var pp PathPkgsIndex
-	pp.LoadIndex()
+	pp.LoadIndex(build.Default, flag)
 	pp.Sort()
 	export := func(pkg *build.Package) {
 		if pkgsJson {
@@ -72,7 +80,7 @@ func runPkgs(cmd *command.Command, args []string) error {
 		}
 	}
 	if pkgsList {
-		for _, pi := range pp.indexs {
+		for _, pi := range pp.Indexs {
 			for _, pkg := range pi.pkgs {
 				if pkgsPkgOnly && pkg.IsCommand() {
 					continue
@@ -81,7 +89,7 @@ func runPkgs(cmd *command.Command, args []string) error {
 			}
 		}
 	} else if pkgsFind != "" {
-		for _, pi := range pp.indexs {
+		for _, pi := range pp.Indexs {
 			for _, pkg := range pi.pkgs {
 				if pkgsPkgOnly && pkg.IsCommand() {
 					continue
@@ -208,13 +216,20 @@ func (p *GoPackage) copyBuild(pp *build.Package) {
 }
 
 type PathPkgsIndex struct {
-	indexs []*PkgsIndex
+	Indexs []*PkgsIndex
 }
 
-func (p *PathPkgsIndex) LoadIndex() {
+type LoadFlag int
+
+const (
+	LoadGoroot LoadFlag = iota
+	LoadSkipGoroot
+	LoadAll
+)
+
+func (p *PathPkgsIndex) LoadIndex(context build.Context, flag LoadFlag) {
 	var wg sync.WaitGroup
-	var context = build.Default
-	if pkgsStd {
+	if flag == LoadGoroot {
 		context.GOPATH = ""
 	}
 	var srcDirs []string
@@ -222,7 +237,7 @@ func (p *PathPkgsIndex) LoadIndex() {
 	gopath := context.GOPATH
 	context.GOPATH = ""
 
-	if !pkgsSkipGoroot {
+	if flag != LoadSkipGoroot {
 		//go1.4 go/src/
 		//go1.3 go/src/pkg; go/src/cmd
 		_, err := os.Stat(filepath.Join(goroot, "src/pkg/runtime"))
@@ -246,7 +261,7 @@ func (p *PathPkgsIndex) LoadIndex() {
 	context.GOROOT = goroot
 	for _, path := range srcDirs {
 		pi := &PkgsIndex{}
-		p.indexs = append(p.indexs, pi)
+		p.Indexs = append(p.Indexs, pi)
 		pkgsGate.enter()
 		f, err := os.Open(path)
 		if err != nil {
@@ -275,7 +290,7 @@ func (p *PathPkgsIndex) LoadIndex() {
 }
 
 func (p *PathPkgsIndex) Sort() {
-	for _, v := range p.indexs {
+	for _, v := range p.Indexs {
 		v.sort()
 	}
 }
