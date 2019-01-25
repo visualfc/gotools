@@ -2,7 +2,6 @@ package pty
 
 import (
 	"errors"
-	"log"
 	"os"
 	"syscall"
 	"unsafe"
@@ -22,7 +21,6 @@ func open() (pty, tty *os.File, err error) {
 	}()
 
 	sname, err := ptsname(p)
-	log.Println(sname)
 	if err != nil {
 		return nil, nil, err
 	}
