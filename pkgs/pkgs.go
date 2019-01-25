@@ -81,7 +81,7 @@ func runPkgs(cmd *command.Command, args []string) error {
 	}
 	if pkgsList {
 		for _, pi := range pp.Indexs {
-			for _, pkg := range pi.pkgs {
+			for _, pkg := range pi.Pkgs {
 				if pkgsPkgOnly && pkg.IsCommand() {
 					continue
 				}
@@ -90,7 +90,7 @@ func runPkgs(cmd *command.Command, args []string) error {
 		}
 	} else if pkgsFind != "" {
 		for _, pi := range pp.Indexs {
-			for _, pkg := range pi.pkgs {
+			for _, pkg := range pi.Pkgs {
 				if pkgsPkgOnly && pkg.IsCommand() {
 					continue
 				}
@@ -297,11 +297,11 @@ func (p *PathPkgsIndex) Sort() {
 
 type PkgsIndex struct {
 	sync.Mutex
-	pkgs []*build.Package
+	Pkgs []*build.Package
 }
 
 func (p *PkgsIndex) sort() {
-	sort.Sort(PkgSlice(p.pkgs))
+	sort.Sort(PkgSlice(p.Pkgs))
 }
 
 type PkgSlice []*build.Package
@@ -384,7 +384,7 @@ func (p *PkgsIndex) loadPkgsPath(wg *sync.WaitGroup, root, pkgrelpath string) {
 				buildPkg.Goroot = true
 			}
 			p.Lock()
-			p.pkgs = append(p.pkgs, buildPkg)
+			p.Pkgs = append(p.Pkgs, buildPkg)
 			p.Unlock()
 		}
 	}
