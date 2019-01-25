@@ -15,7 +15,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/visualfc/gotools/goapi"
 	"github.com/visualfc/gotools/pkg/command"
 )
 
@@ -154,10 +153,10 @@ type GoPackage struct {
 	XTestImports []string `json:",omitempty"` // imports from XTestGoFiles
 
 	// Unexported fields are not part of the public API.
-	build        *build.Package
-	pkgdir       string // overrides build.PkgDir
-	imports      []*goapi.Package
-	deps         []*goapi.Package
+	build  *build.Package
+	pkgdir string // overrides build.PkgDir
+	// imports      []*goapi.Package
+	// deps         []*goapi.Package
 	gofiles      []string // GoFiles+CgoFiles+TestGoFiles+XTestGoFiles files, absolute paths
 	sfiles       []string
 	allgofiles   []string             // gofiles + IgnoredGoFiles, absolute paths
