@@ -43,7 +43,7 @@ func LookupModFile(dir string) (string, error) {
 }
 
 type ModuleList struct {
-	mods map[string]*Module
+	Modules map[string]*Module
 }
 
 func NewModuleList(ctx *build.Context) *ModuleList {
@@ -177,7 +177,7 @@ func (mc *ModuleList) LoadModuleFile(fmod string) (*Module, error) {
 	if err != nil {
 		return nil, err
 	}
-	if m, ok := mc.mods[fmod]; ok {
+	if m, ok := mc.Modules[fmod]; ok {
 		if m.ftime == info.ModTime().UnixNano() {
 			return m, nil
 		}
@@ -192,7 +192,7 @@ func (mc *ModuleList) LoadModuleFile(fmod string) (*Module, error) {
 	}
 	m := &Module{f, info.ModTime().UnixNano(), f.Module.Mod.Path, fmod, filepath.Dir(fmod), nil}
 	m.init()
-	mc.mods[fmod] = m
+	mc.Modules[fmod] = m
 	return m, nil
 }
 

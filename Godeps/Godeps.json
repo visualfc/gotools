@@ -2,9 +2,6 @@
 	"ImportPath": "github.com/visualfc/gotools",
 	"GoVersion": "go1.11",
 	"GodepVersion": "v80",
-	"Packages": [
-		"."
-	],
 	"Deps": [
 		{
 			"ImportPath": "github.com/derekparker/delve/pkg/goversion",
@@ -23,19 +20,19 @@
 		},
 		{
 			"ImportPath": "github.com/visualfc/fastmod",
-			"Rev": "55673724e52ce499359db3572bfdd751aa5364fc"
+			"Rev": "e4bb2da2b95ce0b373e33bcd09196bdd20c2458e"
 		},
 		{
 			"ImportPath": "github.com/visualfc/fastmod/internal/modfile",
-			"Rev": "55673724e52ce499359db3572bfdd751aa5364fc"
+			"Rev": "e4bb2da2b95ce0b373e33bcd09196bdd20c2458e"
 		},
 		{
 			"ImportPath": "github.com/visualfc/fastmod/internal/module",
-			"Rev": "55673724e52ce499359db3572bfdd751aa5364fc"
+			"Rev": "e4bb2da2b95ce0b373e33bcd09196bdd20c2458e"
 		},
 		{
 			"ImportPath": "github.com/visualfc/fastmod/internal/semver",
-			"Rev": "55673724e52ce499359db3572bfdd751aa5364fc"
+			"Rev": "e4bb2da2b95ce0b373e33bcd09196bdd20c2458e"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/container/intsets",
