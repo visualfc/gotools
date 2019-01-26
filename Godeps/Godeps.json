@@ -20,19 +20,19 @@
 		},
 		{
 			"ImportPath": "github.com/visualfc/fastmod",
-			"Rev": "a48a08db48272592f76fa05bdfc2dd553396f32c"
+			"Rev": "91067574a33e4342774a6422df23276809a2baf2"
 		},
 		{
 			"ImportPath": "github.com/visualfc/fastmod/internal/modfile",
-			"Rev": "a48a08db48272592f76fa05bdfc2dd553396f32c"
+			"Rev": "91067574a33e4342774a6422df23276809a2baf2"
 		},
 		{
 			"ImportPath": "github.com/visualfc/fastmod/internal/module",
-			"Rev": "a48a08db48272592f76fa05bdfc2dd553396f32c"
+			"Rev": "91067574a33e4342774a6422df23276809a2baf2"
 		},
 		{
 			"ImportPath": "github.com/visualfc/fastmod/internal/semver",
-			"Rev": "a48a08db48272592f76fa05bdfc2dd553396f32c"
+			"Rev": "91067574a33e4342774a6422df23276809a2baf2"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/container/intsets",
