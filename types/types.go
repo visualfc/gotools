@@ -1080,6 +1080,28 @@ func (w *PkgWalker) lookupNamed(obj types.Object, cname string) types.Object {
 	return nil
 }
 
+// pkg=fmt text=Println
+func (w *PkgWalker) lookupPackage(pkg *types.Package, text string) types.Object {
+	if pkg != nil && pkg.Scope() != nil {
+		ids := strings.Split(text, ".")
+		obj := pkg.Scope().Lookup(ids[0])
+		cursorObj := obj
+		if obj != nil {
+			var n int = 1
+			for n < len(ids) {
+				obj = w.lookupNamed(obj, ids[n])
+				if obj == nil {
+					break
+				}
+				cursorObj = obj
+				n++
+			}
+		}
+		return cursorObj
+	}
+	return nil
+}
+
 func (w *PkgWalker) LookupByText(pkgInfo *types.Info, text string) types.Object {
 	var cursorObj types.Object
 	ids := strings.Split(text, ".")
@@ -1109,10 +1131,28 @@ func (w *PkgWalker) LookupByText(pkgInfo *types.Info, text string) types.Object 
 				}
 			}
 		}
+		if cursorObj == nil {
+			for _, obj := range pkgInfo.Implicits {
+				if obj != nil && obj.Name() == ids[0] {
+					if pkg, ok := obj.(*types.PkgName); ok {
+						cursorObj = w.lookupPackage(pkg.Imported(), strings.Join(ids[1:], "."))
+					}
+				}
+			}
+		}
 	}
 	//check local obj
 	if cursorObj == nil {
 		for _, obj := range pkgInfo.Defs {
+			if obj != nil && obj.Name() == text {
+				cursorObj = obj
+				break
+			}
+		}
+	}
+	//check implicitly declared objects
+	if cursorObj == nil {
+		for _, obj := range pkgInfo.Implicits {
 			if obj != nil && obj.Name() == text {
 				cursorObj = obj
 				break
