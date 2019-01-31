@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestTypes(t *testing.T) {
+func _TestTypes(t *testing.T) {
 	w := NewPkgWalker(&build.Default)
 	w.SetOutput(os.Stdout, os.Stderr)
 	w.SetFindMode(&FindMode{Info: true, Doc: true, Define: true})
@@ -20,7 +20,7 @@ func TestTypes(t *testing.T) {
 	w.LookupCursor(pkg, conf, cursor)
 }
 
-func TestOS(t *testing.T) {
+func _TestOS(t *testing.T) {
 	w := NewPkgWalker(&build.Default)
 
 	w.SetOutput(os.Stdout, os.Stderr)
