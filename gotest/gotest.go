@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/visualfc/gotools/pkg/command"
+	"golang.org/x/tools/go/buildutil"
 )
 
 var Command = &command.Command{
@@ -103,7 +104,10 @@ func ApplyBuildTags() {
 	nexttag := false
 	for _, arg := range os.Args[1:] {
 		if nexttag {
-			build.Default.BuildTags = strings.Split(arg, ",")
+			var tags buildutil.TagsFlag
+			tags.Set(arg)
+
+			build.Default.BuildTags = tags
 			nexttag = false
 			continue
 		}
