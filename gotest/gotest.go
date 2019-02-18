@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/visualfc/gotools/pkg/command"
+	"golang.org/x/tools/go/buildutil"
 )
 
 var Command = &command.Command{
@@ -25,9 +26,10 @@ var Command = &command.Command{
 var testFileName string
 var testFileArgs string
 
-//func init() {
-//	Command.Flag.StringVar(&testFileName, "f", "", "test go filename")
-//}
+func init() {
+	//Command.Flag.StringVar(&testFileName, "f", "", "test go filename")
+	ApplyBuildTags()
+}
 
 func runGotest(cmd *command.Command, args []string) error {
 	index := -1
@@ -96,4 +98,21 @@ func runGotest(cmd *command.Command, args []string) error {
 	command.Stderr = os.Stderr
 
 	return command.Run()
+}
+
+func ApplyBuildTags() {
+	nexttag := false
+	for _, arg := range os.Args[1:] {
+		if nexttag {
+			var tags buildutil.TagsFlag
+			tags.Set(arg)
+
+			build.Default.BuildTags = tags
+			nexttag = false
+			continue
+		}
+		if arg == "-tags" {
+			nexttag = true
+		}
+	}
 }
