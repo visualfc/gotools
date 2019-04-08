@@ -4,7 +4,7 @@
 	"GodepVersion": "v80",
 	"Deps": [
 		{
-			"ImportPath": "github.com/derekparker/delve/pkg/goversion",
+			"ImportPath": "github.com/go-delve/delve/pkg/goversion",
 			"Comment": "v1.1.0-84-ga86711f",
 			"Rev": "a86711f547fdfef6a2c1bc5755569f9b25b64323"
 		},
