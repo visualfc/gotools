@@ -7,7 +7,7 @@ package debugflags
 import (
 	"runtime"
 
-	"github.com/derekparker/delve/pkg/goversion"
+	"github.com/go-delve/delve/pkg/goversion"
 	"github.com/visualfc/gotools/pkg/command"
 )
 
