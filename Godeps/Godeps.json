@@ -5,13 +5,13 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/derekparker/delve/pkg/goversion",
-			"Comment": "v1.1.0-84-ga86711f",
-			"Rev": "a86711f547fdfef6a2c1bc5755569f9b25b64323"
+			"Comment": "v1.2.0-19-gcba328f",
+			"Rev": "cba328f83404a02bc7a71842590a5c9a434f6015"
 		},
 		{
 			"ImportPath": "github.com/kr/pty",
-			"Comment": "v1.1.3",
-			"Rev": "db8e3cd836b82e82e0a9c8edc6896967dd31374f"
+			"Comment": "v1.1.4-1-gb6e1bdd",
+			"Rev": "b6e1bdd4a4f88614e0c6e5e8089c7abed98aae17"
 		},
 		{
 			"ImportPath": "github.com/pmezard/go-difflib/difflib",
@@ -20,19 +20,19 @@
 		},
 		{
 			"ImportPath": "github.com/visualfc/fastmod",
-			"Rev": "c069a47540ebc83f11b595c7f8884ebc333f9589"
+			"Rev": "a64c9cb9126ce483bb4db496a685fdc89f32fd1f"
 		},
 		{
 			"ImportPath": "github.com/visualfc/fastmod/internal/modfile",
-			"Rev": "c069a47540ebc83f11b595c7f8884ebc333f9589"
+			"Rev": "a64c9cb9126ce483bb4db496a685fdc89f32fd1f"
 		},
 		{
 			"ImportPath": "github.com/visualfc/fastmod/internal/module",
-			"Rev": "c069a47540ebc83f11b595c7f8884ebc333f9589"
+			"Rev": "a64c9cb9126ce483bb4db496a685fdc89f32fd1f"
 		},
 		{
 			"ImportPath": "github.com/visualfc/fastmod/internal/semver",
-			"Rev": "c069a47540ebc83f11b595c7f8884ebc333f9589"
+			"Rev": "a64c9cb9126ce483bb4db496a685fdc89f32fd1f"
 		},
 		{
 			"ImportPath": "golang.org/x/tools/container/intsets",
