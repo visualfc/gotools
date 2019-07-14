@@ -7,5 +7,5 @@ require (
 	github.com/kr/pty v1.1.5
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 	github.com/visualfc/fastmod v0.0.0-20190714050813-3600cbe34ad5
-	golang.org/x/tools v0.0.0-20181120060634-fc4f04983f62
+	golang.org/x/tools v0.0.0-20190710184609-286818132824
 )
