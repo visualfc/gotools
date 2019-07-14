@@ -23,6 +23,8 @@ github.com/visualfc/fastmod v0.0.0-20181016024209-0c76ede00fe8 h1:x6brZguegssDWY
 github.com/visualfc/fastmod v0.0.0-20181016024209-0c76ede00fe8/go.mod h1:qklLSKOIVNIn5SdfGlics3Ljx4kOC29a2gwOS+NjDnQ=
 github.com/visualfc/fastmod v0.0.0-20190713095117-a64c9cb9126c h1:45bUyeKCLFW5iopgsTnkTaWfRocPr9iN3YWqxMnIJWo=
 github.com/visualfc/fastmod v0.0.0-20190713095117-a64c9cb9126c/go.mod h1:qklLSKOIVNIn5SdfGlics3Ljx4kOC29a2gwOS+NjDnQ=
+github.com/visualfc/fastmod v0.0.0-20190714050813-3600cbe34ad5 h1:FuGn4YpG80MHJ2F817yeZsSFMfnpXUYHJsuU5+W6AT8=
+github.com/visualfc/fastmod v0.0.0-20190714050813-3600cbe34ad5/go.mod h1:qklLSKOIVNIn5SdfGlics3Ljx4kOC29a2gwOS+NjDnQ=
 go.starlark.net v0.0.0-20190702223751-32f345186213/go.mod h1:c1/X6cHgvdXj6pUlmWKMkuqRnW4K8x2vwt6JAaaircg=
 golang.org/x/arch v0.0.0-20171004143515-077ac972c2e4/go.mod h1:cYlCBUl1MsqxdiKgmc4uh7TxZfWSFLOGSRR090WDxt8=
 golang.org/x/crypto v0.0.0-20180614174826-fd5f17ee7299/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
