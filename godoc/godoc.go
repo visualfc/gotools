@@ -43,7 +43,7 @@ func runDoc(cmd *command.Command, args []string) error {
 	if godoc_html {
 		command = exec.Command(godoc, "-html", args[0])
 	} else {
-		command = exec.Command(gocmd, "doc", args[0])
+		command = exec.Command(gocmd, "doc", "-all", args[0])
 	}
 	command.Stdin = cmd.Stdin
 	command.Stdout = cmd.Stdout
