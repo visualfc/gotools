@@ -1220,6 +1220,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			}
 		}
 	}
+
 	if cursorObj == nil && cursor.text != "" {
 		cursorObj = w.LookupByText(pkgInfo, cursor.text)
 	}
@@ -1235,7 +1236,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		kind = ObjImplicit
 	} else {
 		//TODO
-		return fmt.Errorf("nof find object %v:%v", cursor.fileName, cursor.pos)
+		return fmt.Errorf("not find object %v:%v", cursor.fileName, cursor.pos)
 	}
 	if kind == ObjField {
 		if cursorObj.(*types.Var).Anonymous() {
