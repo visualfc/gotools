@@ -1220,7 +1220,6 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			}
 		}
 	}
-
 	if cursorObj == nil && cursor.text != "" {
 		cursorObj = w.LookupByText(pkgInfo, cursor.text)
 	}
@@ -1235,6 +1234,18 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 	} else if cursorId != nil {
 		kind = ObjImplicit
 	} else {
+		for id, _ := range pkgInfo.Types {
+			if cursor.pos >= id.Pos() && cursor.pos <= id.End() {
+				switch v := id.(type) {
+				case *ast.BasicLit:
+					if w.findMode.Info {
+						w.cmd.Println(fmt.Sprintf("basic type %v (%v)", v.Kind, v.Value))
+						return nil
+					}
+					return fmt.Errorf("not support basic type: %v (%v)", v.Kind, v.Value)
+				}
+			}
+		}
 		//TODO
 		return fmt.Errorf("not find object %v:%v", cursor.fileName, cursor.pos)
 	}
