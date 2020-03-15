@@ -1436,7 +1436,12 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		} else if kind == ObjImplicit {
 			w.cmd.Printf("%s is implicit\n", cursorObj)
 		} else if cursorInfo.isInterfaceMethod {
-			w.cmd.Println(strings.Replace(simpleObjInfo(cursorObj), "(interface)", cursorPkg.Name()+"."+cursorInfo.interfaceTypeName, 1))
+			if cursorPkg == nil {
+				// error.Error()
+				w.cmd.Println(simpleObjInfo(cursorObj))
+			} else {
+				w.cmd.Println(strings.Replace(simpleObjInfo(cursorObj), "(interface)", cursorPkg.Name()+"."+cursorInfo.interfaceTypeName, 1))
+			}
 		} else {
 			w.cmd.Println(simpleObjInfo(cursorObj))
 		}
