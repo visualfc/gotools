@@ -1347,6 +1347,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 	}
 	var packageName string
 	var packagePath string
+	var isImport bool
 	if im := w.CheckIsName(cursor); im != nil {
 		cursorId = im
 		kind = ObjPackage
@@ -1355,6 +1356,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 	} else if im := w.CheckIsImport(cursor); im != nil {
 		cursorId = im.Path
 		kind = ObjPkgName
+		isImport = true
 		packagePath, _ = strconv.Unquote(im.Path.Value)
 		if im.Name != nil {
 			packageName = im.Name.Name
@@ -1409,7 +1411,31 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 	cursorPos = cursorInfo.pos
 
 	if w.findMode.Define {
-		w.cmd.Println(w.FileSet.Position(cursorInfo.pos))
+		if isImport {
+			var fname = packageName
+			var fpath = packagePath
+			var findpath string = fpath
+			//check imported and vendor
+			for _, v := range w.Imported {
+				vpath := v.Path()
+				pos := strings.Index(vpath, "/vendor/")
+				if pos >= 0 {
+					vpath = vpath[pos+8:]
+				}
+				if vpath == fpath {
+					findpath = v.Path()
+					break
+				}
+			}
+			bp, err := w.importPath("", findpath, build.FindOnly)
+			if err == nil {
+				w.cmd.Println(w.FileSet.Position(cursorInfo.pos).String() + "::" + fname + "::" + fpath + "::" + bp.Dir)
+			} else {
+				w.cmd.Println(w.FileSet.Position(cursorInfo.pos))
+			}
+		} else {
+			w.cmd.Println(w.FileSet.Position(cursorInfo.pos))
+		}
 	}
 	if w.findMode.Info {
 		// if kind == ObjField && fieldTypeObj != nil {
@@ -1446,7 +1472,6 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			w.cmd.Println(simpleObjInfo(cursorObj))
 		}
 	}
-
 	if w.findMode.Doc && w.findMode.Define {
 		pos := w.FileSet.Position(cursorPos)
 		file := w.ParsedFileCache[pos.Filename]
