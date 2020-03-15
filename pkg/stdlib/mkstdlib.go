@@ -24,7 +24,8 @@ import (
 func mustOpen(name string) io.Reader {
 	f, err := os.Open(name)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return nil
 	}
 	return f
 }
@@ -56,6 +57,9 @@ func main() {
 		mustOpen(api("go1.9.txt")),
 		mustOpen(api("go1.10.txt")),
 		mustOpen(api("go1.11.txt")),
+		mustOpen(api("go1.12.txt")),
+		mustOpen(api("go1.13.txt")),
+		mustOpen(api("go1.14.txt")),
 	)
 	sc := bufio.NewScanner(f)
 	fullImport := map[string]string{} // "zip.NewReader" => "archive/zip"

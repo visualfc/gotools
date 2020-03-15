@@ -169,9 +169,9 @@ func main() {
 		if v == "" {
 			continue
 		}
-		//		if strings.HasPrefix(v, "vendor/") {
-		//			continue
-		//		}
+		if strings.HasPrefix(v, "vendor/") {
+			continue
+		}
 		pkgList = append(pkgList, v)
 	}
 
