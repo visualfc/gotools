@@ -16,10 +16,6 @@ github.com/russross/blackfriday v0.0.0-20180428102519-11635eb403ff/go.mod h1:JO/
 github.com/sirupsen/logrus v0.0.0-20180523074243-ea8897e79973/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/spf13/cobra v0.0.0-20170417170307-b6cb39589372/go.mod h1:1l0Ry5zgKvJasoi3XT1TypsSe7PqH0Sj9dhYf7v3XqQ=
 github.com/spf13/pflag v0.0.0-20170417173400-9e4c21054fa1/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
-github.com/visualfc/fastmod v0.0.0-20190714050813-3600cbe34ad5 h1:FuGn4YpG80MHJ2F817yeZsSFMfnpXUYHJsuU5+W6AT8=
-github.com/visualfc/fastmod v0.0.0-20190714050813-3600cbe34ad5/go.mod h1:qklLSKOIVNIn5SdfGlics3Ljx4kOC29a2gwOS+NjDnQ=
-github.com/visualfc/fastmod v0.0.0-20200106141131-2bd8bfc0578f h1:XXkmqMVWchE7AizXintmZ8bZr3Sy8RaLk+wSjTbWOkk=
-github.com/visualfc/fastmod v0.0.0-20200106141131-2bd8bfc0578f/go.mod h1:qklLSKOIVNIn5SdfGlics3Ljx4kOC29a2gwOS+NjDnQ=
 github.com/visualfc/fastmod v1.0.0 h1:3UcYFM+mzdk5AeKF7itO7D7rEv9Vkk0f2HOZi6KCMh8=
 github.com/visualfc/fastmod v1.0.0/go.mod h1:MjR7AyXKzcr5S9uEeJPI4xID37/q88a8FSBS/2H8AFc=
 go.starlark.net v0.0.0-20190702223751-32f345186213/go.mod h1:c1/X6cHgvdXj6pUlmWKMkuqRnW4K8x2vwt6JAaaircg=

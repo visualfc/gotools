@@ -16,7 +16,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/visualfc/gotools/stdlib"
+	"github.com/visualfc/gotools/pkg/stdlib"
 
 	"golang.org/x/tools/go/ast/astutil"
 )

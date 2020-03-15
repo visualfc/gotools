@@ -20,7 +20,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/visualfc/gotools/command"
+	"github.com/visualfc/gotools/pkg/command"
 )
 
 var Command = &command.Command{
@@ -149,7 +149,7 @@ func processFile(filename string, in io.Reader, out io.Writer, stdin bool) error
 			if err != nil {
 				return fmt.Errorf("computing diff: %s", err)
 			}
-			fmt.Fprintf(out,"diff %s gofmt/%s\n", filename, filename)
+			fmt.Fprintf(out, "diff %s gofmt/%s\n", filename, filename)
 			out.Write(data)
 		}
 	}
