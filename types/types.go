@@ -54,6 +54,7 @@ var (
 	typesFindInfo        bool
 	typesFindDoc         bool
 	typesFindImportRange bool
+	typesFindImport      bool
 	typesTags            string
 	typesTagList         = []string{} // exploded version of tags flag; set in main
 )
@@ -69,6 +70,7 @@ func init() {
 	Command.Flag.BoolVar(&typesFindDef, "def", false, "find cursor define")
 	Command.Flag.BoolVar(&typesFindUse, "use", false, "find cursor usages")
 	Command.Flag.BoolVar(&typesFindUseAll, "all", false, "find cursor all usages in GOPATH")
+	Command.Flag.BoolVar(&typesFindImport, "import", false, "find cursor usages with import")
 	Command.Flag.BoolVar(&typesFindImportRange, "import_range", false, "find cursor usages with import range")
 	Command.Flag.BoolVar(&typesFindSkipGoroot, "skip_goroot", false, "find cursor all usages skip GOROOT")
 	Command.Flag.BoolVar(&typesFindDoc, "doc", false, "find cursor def doc")
@@ -207,6 +209,7 @@ func runTypes(cmd *command.Command, args []string) error {
 		Doc:         typesFindDoc,
 		Usage:       typesFindUse,
 		UsageAll:    typesFindUseAll,
+		Import:      typesFindImport,
 		ImportRange: typesFindImportRange,
 		SkipGoroot:  typesFindSkipGoroot,
 	}
@@ -264,6 +267,7 @@ type FindMode struct {
 	Define      bool
 	Usage       bool
 	UsageAll    bool
+	Import      bool
 	ImportRange bool
 	SkipGoroot  bool
 }
@@ -1505,7 +1509,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 				usages = append(usages, findPackageUses(packagePath, conf.XTestFiles, conf.XInfo)...)
 				if w.findMode.ImportRange {
 					importRange = append(importRange, findPackageImportRange(packagePath, conf.XTestFiles)...)
-				} else {
+				} else if w.findMode.Import {
 					usages = append(usages, findPackageImports(packageName, packagePath, conf.XTestFiles)...)
 				}
 			}
@@ -1517,7 +1521,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			usages = append(usages, findPackageUses(packagePath, conf.Files, conf.Info)...)
 			if w.findMode.ImportRange {
 				importRange = append(importRange, findPackageImportRange(packagePath, conf.Files)...)
-			} else {
+			} else if w.findMode.Import {
 				usages = append(usages, findPackageImports(packageName, packagePath, conf.Files)...)
 			}
 		}
@@ -1525,7 +1529,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			usages = append(usages, findPackageUses(packagePath, conf.XTestFiles, conf.XInfo)...)
 			if w.findMode.ImportRange {
 				importRange = append(importRange, findPackageImportRange(packagePath, conf.XTestFiles)...)
-			} else {
+			} else if w.findMode.Import {
 				usages = append(usages, findPackageImports(packageName, packagePath, conf.XTestFiles)...)
 			}
 		}
@@ -1751,7 +1755,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 					usages = append(usages, findPackageUses(packagePath, conf.Files, conf.Info)...)
 					if w.findMode.ImportRange {
 						importRange = append(importRange, findPackageImportRange(packagePath, conf.Files)...)
-					} else {
+					} else if w.findMode.Import {
 						usages = append(usages, findPackageImports(packageName, packagePath, conf.Files)...)
 					}
 				}
@@ -1759,7 +1763,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 					usages = append(usages, findPackageUses(packagePath, conf.XTestFiles, conf.XInfo)...)
 					if w.findMode.ImportRange {
 						importRange = append(importRange, findPackageImportRange(packagePath, conf.XTestFiles)...)
-					} else {
+					} else if w.findMode.Import {
 						usages = append(usages, findPackageImports(packageName, packagePath, conf.XTestFiles)...)
 					}
 				}
