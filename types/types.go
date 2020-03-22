@@ -1399,20 +1399,19 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		return fmt.Errorf("not found object")
 	}
 
-	var cursorInfo *ObjectInfo
+	var findInfo *ObjectInfo
 	var cursorPkg *types.Package
 	var cursorPos token.Pos
 	if cursorObj != nil {
-		cursorInfo = w.CheckObjectInfo(cursorObj, cursorSelection, kind, pkg, pkgInfo)
+		findInfo = w.CheckObjectInfo(cursorObj, cursorSelection, kind, pkg, pkgInfo)
 	} else {
-		cursorInfo = &ObjectInfo{
+		findInfo = &ObjectInfo{
 			pkg: pkg,
 			pos: cursorId.Pos(),
 		}
 	}
-	cursorObj = cursorInfo.obj
-	cursorPkg = cursorInfo.pkg
-	cursorPos = cursorInfo.pos
+	cursorPkg = findInfo.pkg
+	cursorPos = findInfo.pos
 
 	if w.findMode.Define {
 		if isImport {
@@ -1433,12 +1432,12 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			}
 			bp, err := w.importPath("", findpath, build.FindOnly)
 			if err == nil {
-				w.cmd.Println(w.FileSet.Position(cursorInfo.pos).String() + "::" + fname + "::" + fpath + "::" + bp.Dir)
+				w.cmd.Println(w.FileSet.Position(findInfo.pos).String() + "::" + fname + "::" + fpath + "::" + bp.Dir)
 			} else {
-				w.cmd.Println(w.FileSet.Position(cursorInfo.pos))
+				w.cmd.Println(w.FileSet.Position(findInfo.pos))
 			}
 		} else {
-			w.cmd.Println(w.FileSet.Position(cursorInfo.pos))
+			w.cmd.Println(w.FileSet.Position(findInfo.pos))
 		}
 	}
 	if w.findMode.Info {
@@ -1465,12 +1464,12 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			}
 		} else if kind == ObjImplicit {
 			w.cmd.Printf("%s is implicit\n", cursorObj)
-		} else if cursorInfo.isInterfaceMethod {
+		} else if findInfo.isInterfaceMethod {
 			if cursorPkg == nil {
 				// error.Error()
-				w.cmd.Println(simpleObjInfo(cursorObj))
+				w.cmd.Println(simpleObjInfo(findInfo.obj))
 			} else {
-				w.cmd.Println(strings.Replace(simpleObjInfo(cursorObj), "(interface)", cursorPkg.Name()+"."+cursorInfo.interfaceTypeName, 1))
+				w.cmd.Println(strings.Replace(simpleObjInfo(findInfo.obj), "(interface)", cursorPkg.Name()+"."+findInfo.interfaceTypeName, 1))
 			}
 		} else {
 			w.cmd.Println(simpleObjInfo(cursorObj))
