@@ -4,7 +4,7 @@ github.com/creack/pty
 github.com/go-delve/delve/pkg/goversion
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
-# github.com/visualfc/fastmod v1.2.1
+# github.com/visualfc/fastmod v1.3.0
 github.com/visualfc/fastmod
 # github.com/yuin/goldmark v1.1.25
 github.com/yuin/goldmark
