@@ -29,6 +29,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/visualfc/fastmod v1.0.0 h1:3UcYFM+mzdk5AeKF7itO7D7rEv9Vkk0f2HOZi6KCMh8=
 github.com/visualfc/fastmod v1.0.0/go.mod h1:MjR7AyXKzcr5S9uEeJPI4xID37/q88a8FSBS/2H8AFc=
+github.com/visualfc/fastmod v1.2.0 h1:DwuyA4xcSzQ/dwAA75nO2J8YXr8h/ouLEzzhIKGfURA=
+github.com/visualfc/fastmod v1.2.0/go.mod h1:GGLvzTGsAMsVBMSLEnypACnwEj6syguJSV0qob6LveI=
 github.com/yuin/goldmark v1.1.25 h1:isv+Q6HQAmmL2Ofcmg8QauBmDPlUUnSoNhEcC940Rds=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 go.starlark.net v0.0.0-20190702223751-32f345186213/go.mod h1:c1/X6cHgvdXj6pUlmWKMkuqRnW4K8x2vwt6JAaaircg=
