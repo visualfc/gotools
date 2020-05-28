@@ -35,6 +35,8 @@ github.com/visualfc/fastmod v1.3.2 h1:epzPttZQB6zsll9g16s2s0TidibhYDRJOz9nin1jwW
 github.com/visualfc/fastmod v1.3.2/go.mod h1:IpOumy9gVomQ72T+yA7gayE3V1FCNlwr6if3mlqnasY=
 github.com/visualfc/fastmod v1.3.5 h1:MmgLQB+v/mvp63bFvG/62OBgwK5Ox+xrno9+IDudDsk=
 github.com/visualfc/fastmod v1.3.5/go.mod h1:IpOumy9gVomQ72T+yA7gayE3V1FCNlwr6if3mlqnasY=
+github.com/visualfc/fastmod v1.3.6 h1:gFvAxk6VoEbk0JF1XP0KznbQl5hYJN9ZYhRYQy3pcKs=
+github.com/visualfc/fastmod v1.3.6/go.mod h1:IpOumy9gVomQ72T+yA7gayE3V1FCNlwr6if3mlqnasY=
 github.com/yuin/goldmark v1.1.25 h1:isv+Q6HQAmmL2Ofcmg8QauBmDPlUUnSoNhEcC940Rds=
 github.com/yuin/goldmark v1.1.25/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 go.starlark.net v0.0.0-20190702223751-32f345186213/go.mod h1:c1/X6cHgvdXj6pUlmWKMkuqRnW4K8x2vwt6JAaaircg=
