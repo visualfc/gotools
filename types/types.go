@@ -677,7 +677,7 @@ func (im *Importer) Import(name string) (pkg *types.Package, err error) {
 		//		}
 	}
 
-	pkg, _, err = im.w.Import(im.dir, name, NewPkgConfig(true, false), nil)
+	pkg, _, err = im.w.Import(im.dir, name, NewPkgConfig(true, !typesSkipTests), nil)
 	return pkg, err
 }
 
@@ -1071,7 +1071,7 @@ func parserObjKind(obj types.Object) (ObjKind, error) {
 
 func (w *PkgWalker) LookupStructFromField(info *types.Info, cursorPkg *types.Package, cursorObj types.Object, cursorPos token.Pos) types.Object {
 	if info == nil {
-		conf := NewPkgConfig(true, true)
+		conf := NewPkgConfig(true, !typesSkipTests)
 		_, outconf, _ := w.Import("", cursorPkg.Path(), conf, nil)
 		if outconf != nil {
 			info = outconf.Info
@@ -1746,7 +1746,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 	for _, v := range uses_paths {
 		var usages []int
 		var importRange []ast.Expr
-		vpkg, conf, _ := w.Import("", v, NewPkgConfig(false, true), nil)
+		vpkg, conf, _ := w.Import("", v, NewPkgConfig(false, !typesSkipTests), nil)
 		if vpkg != nil && vpkg.Path() == packagePath && kind == ObjPkgName {
 			usages = append(usages, findPackageDef(packageName, conf.Files)...)
 		}
@@ -1977,7 +1977,7 @@ func (w *PkgWalker) CheckObjectInfo(cursorObj types.Object, cursorSelection *typ
 	}
 	if cursorPkg != nil && cursorPkg != pkg &&
 		kind != ObjPkgName && w.isBinaryPkg(cursorPkg.Path()) {
-		pkg, conf, _ := w.Import("", cursorPkg.Path(), NewPkgConfig(true, true), nil)
+		pkg, conf, _ := w.Import("", cursorPkg.Path(), NewPkgConfig(true, !typesSkipTests), nil)
 		if pkg != nil {
 			if cursorIsInterfaceMethod {
 				for k, v := range conf.Info.Defs {
