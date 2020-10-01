@@ -55,6 +55,7 @@ var (
 	typesFindDoc         bool
 	typesFindImportRange bool
 	typesFindImport      bool
+	typesSkipTests       bool
 	typesTags            string
 	typesTagList         = []string{} // exploded version of tags flag; set in main
 )
@@ -73,6 +74,7 @@ func init() {
 	Command.Flag.BoolVar(&typesFindImport, "import", false, "find cursor usages with import")
 	Command.Flag.BoolVar(&typesFindImportRange, "import_range", false, "find cursor usages with import range")
 	Command.Flag.BoolVar(&typesFindSkipGoroot, "skip_goroot", false, "find cursor all usages skip GOROOT")
+	Command.Flag.BoolVar(&typesSkipTests, "skip_tests", false, "find cursor all usages skip tests")
 	Command.Flag.BoolVar(&typesFindDoc, "doc", false, "find cursor def doc")
 	Command.Flag.StringVar(&typesTags, "tags", "", "space-separated list of build tags to apply when parsing")
 }
@@ -226,7 +228,7 @@ func runTypes(cmd *command.Command, args []string) error {
 		if cursor.src != nil {
 			w.UpdateSourceData(filepath.Join(pkgName, cursor.fileName), cursor.src, false)
 		}
-		conf := DefaultPkgConfig()
+		conf := NewPkgConfig(false, !typesSkipTests)
 		pkg, outconf, err := w.Check(pkgName, conf, cursor)
 		if pkg == nil {
 			return fmt.Errorf("error import path %v", err)
