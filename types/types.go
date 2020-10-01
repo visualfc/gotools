@@ -527,7 +527,11 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 		GoFiles = append(GoFiles, bp.TestGoFiles...)
 	}
 	conf.Bpkg = bp
-	XTestGoFiles := append([]string{}, bp.XTestGoFiles...)
+
+	var XTestGoFiles []string
+	if conf.WithTestFiles {
+		XTestGoFiles = append(XTestGoFiles, bp.XTestGoFiles...)
+	}
 
 	//check cursor file
 	if cursor != nil && cursor.fileName != "" {
@@ -550,7 +554,9 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 				return append([]string{file}, filenames...)
 			}
 			if isXTest {
-				XTestGoFiles = checkInsert(XTestGoFiles, cursor.fileName)
+				if conf.WithTestFiles {
+					XTestGoFiles = checkInsert(XTestGoFiles, cursor.fileName)
+				}
 			} else {
 				GoFiles = checkInsert(GoFiles, cursor.fileName)
 			}
