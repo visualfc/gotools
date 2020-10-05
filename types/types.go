@@ -683,7 +683,7 @@ func (im *Importer) Import(name string) (pkg *types.Package, err error) {
 		//		}
 	}
 
-	pkg, _, err = im.w.Import(im.dir, name, NewPkgConfig(true, !typesSkipTests), nil)
+	pkg, _, err = im.w.Import(im.dir, name, NewPkgConfig(true, false), nil)
 	return pkg, err
 }
 
