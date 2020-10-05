@@ -55,6 +55,7 @@ var (
 	typesFindDoc         bool
 	typesFindImportRange bool
 	typesFindImport      bool
+	typesSkipTests       bool
 	typesTags            string
 	typesTagList         = []string{} // exploded version of tags flag; set in main
 )
@@ -73,6 +74,7 @@ func init() {
 	Command.Flag.BoolVar(&typesFindImport, "import", false, "find cursor usages with import")
 	Command.Flag.BoolVar(&typesFindImportRange, "import_range", false, "find cursor usages with import range")
 	Command.Flag.BoolVar(&typesFindSkipGoroot, "skip_goroot", false, "find cursor all usages skip GOROOT")
+	Command.Flag.BoolVar(&typesSkipTests, "skip_tests", false, "find cursor all usages skip tests")
 	Command.Flag.BoolVar(&typesFindDoc, "doc", false, "find cursor def doc")
 	Command.Flag.StringVar(&typesTags, "tags", "", "space-separated list of build tags to apply when parsing")
 }
@@ -226,7 +228,7 @@ func runTypes(cmd *command.Command, args []string) error {
 		if cursor.src != nil {
 			w.UpdateSourceData(filepath.Join(pkgName, cursor.fileName), cursor.src, false)
 		}
-		conf := DefaultPkgConfig()
+		conf := NewPkgConfig(false, !typesSkipTests)
 		pkg, outconf, err := w.Check(pkgName, conf, cursor)
 		if pkg == nil {
 			return fmt.Errorf("error import path %v", err)
@@ -525,7 +527,11 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 		GoFiles = append(GoFiles, bp.TestGoFiles...)
 	}
 	conf.Bpkg = bp
-	XTestGoFiles := append([]string{}, bp.XTestGoFiles...)
+
+	var XTestGoFiles []string
+	if conf.WithTestFiles {
+		XTestGoFiles = append(XTestGoFiles, bp.XTestGoFiles...)
+	}
 
 	//check cursor file
 	if cursor != nil && cursor.fileName != "" {
@@ -548,7 +554,9 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 				return append([]string{file}, filenames...)
 			}
 			if isXTest {
-				XTestGoFiles = checkInsert(XTestGoFiles, cursor.fileName)
+				if conf.WithTestFiles {
+					XTestGoFiles = checkInsert(XTestGoFiles, cursor.fileName)
+				}
 			} else {
 				GoFiles = checkInsert(GoFiles, cursor.fileName)
 			}
@@ -675,7 +683,7 @@ func (im *Importer) Import(name string) (pkg *types.Package, err error) {
 		//		}
 	}
 
-	pkg, _, err = im.w.Import(im.dir, name, NewPkgConfig(true, false), nil)
+	pkg, _, err = im.w.Import(im.dir, name, NewPkgConfig(true, !typesSkipTests), nil)
 	return pkg, err
 }
 
@@ -1069,7 +1077,7 @@ func parserObjKind(obj types.Object) (ObjKind, error) {
 
 func (w *PkgWalker) LookupStructFromField(info *types.Info, cursorPkg *types.Package, cursorObj types.Object, cursorPos token.Pos) types.Object {
 	if info == nil {
-		conf := NewPkgConfig(true, true)
+		conf := NewPkgConfig(true, !typesSkipTests)
 		_, outconf, _ := w.Import("", cursorPkg.Path(), conf, nil)
 		if outconf != nil {
 			info = outconf.Info
@@ -1744,7 +1752,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 	for _, v := range uses_paths {
 		var usages []int
 		var importRange []ast.Expr
-		vpkg, conf, _ := w.Import("", v, NewPkgConfig(false, true), nil)
+		vpkg, conf, _ := w.Import("", v, NewPkgConfig(false, !typesSkipTests), nil)
 		if vpkg != nil && vpkg.Path() == packagePath && kind == ObjPkgName {
 			usages = append(usages, findPackageDef(packageName, conf.Files)...)
 		}
@@ -1975,7 +1983,7 @@ func (w *PkgWalker) CheckObjectInfo(cursorObj types.Object, cursorSelection *typ
 	}
 	if cursorPkg != nil && cursorPkg != pkg &&
 		kind != ObjPkgName && w.isBinaryPkg(cursorPkg.Path()) {
-		pkg, conf, _ := w.Import("", cursorPkg.Path(), NewPkgConfig(true, true), nil)
+		pkg, conf, _ := w.Import("", cursorPkg.Path(), NewPkgConfig(true, !typesSkipTests), nil)
 		if pkg != nil {
 			if cursorIsInterfaceMethod {
 				for k, v := range conf.Info.Defs {
