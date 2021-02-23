@@ -7,8 +7,8 @@ package godoc
 import (
 	"os/exec"
 
-	"github.com/go-delve/delve/pkg/goversion"
 	"github.com/visualfc/gotools/pkg/command"
+	"github.com/visualfc/goversion"
 )
 
 var Command = &command.Command{
