@@ -5,6 +5,7 @@
 package godoc
 
 import (
+	"errors"
 	"os/exec"
 
 	"github.com/visualfc/gotools/pkg/command"
@@ -26,7 +27,10 @@ func runDoc(cmd *command.Command, args []string) error {
 	if len(args) < 1 {
 		return nil
 	}
-	ver, _ := goversion.Installed()
+	ver, _, ok := goversion.Installed()
+	if !ok {
+		return errors.New("could not parse output of go version")
+	}
 	gocmd, err := exec.LookPath("go")
 	if err != nil {
 		return err

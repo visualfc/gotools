@@ -5,6 +5,7 @@
 package debugflags
 
 import (
+	"errors"
 	"runtime"
 
 	"github.com/visualfc/gotools/pkg/command"
@@ -22,7 +23,10 @@ var Command = &command.Command{
 func runDebugFlags(cmd *command.Command, args []string) error {
 	var buildFlagsDefault string
 	if runtime.GOOS == "windows" {
-		ver, _ := goversion.Installed()
+		ver, _, ok := goversion.Installed()
+		if !ok {
+			return errors.New("could not parse output of go version")
+		}
 		if ver.Major > 0 && !ver.AfterOrEqual(goversion.GoVersion{1, 9, -1, 0, 0, ""}) {
 			// Work-around for https://github.com/golang/go/issues/13154
 			buildFlagsDefault = "-ldflags='-linkmode internal'"
@@ -42,9 +46,11 @@ func debugflags() string {
 	// after go1.10 specifying -a is unnecessary because of the new caching strategy, but we should pass -gcflags=all=-N -l to have it applied to all packages
 	// see https://github.com/golang/go/commit/5993251c015dfa1e905bdf44bdb41572387edf90
 
-	ver, _ := goversion.Installed()
 	var flags string
+	ver, _, ok := goversion.Installed()
 	switch {
+	case !ok:
+		flags = ""
 	case ver.Major < 0 || ver.AfterOrEqual(goversion.GoVersion{1, 10, -1, 0, 0, ""}):
 		flags = "-gcflags=\"all=-N -l\""
 	case ver.AfterOrEqual(goversion.GoVersion{1, 9, -1, 0, 0, ""}):
