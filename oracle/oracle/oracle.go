@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//go:build go1.5
 // +build go1.5
 
 // Package oracle contains the implementation of the oracle tool whose
@@ -32,6 +33,7 @@ import (
 	"path/filepath"
 
 	"github.com/visualfc/gotools/oracle/oracle/serial"
+	"github.com/visualfc/gotools/oracle/testmain"
 	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/go/buildutil"
 	"golang.org/x/tools/go/loader"
@@ -189,7 +191,12 @@ func setupPTA(prog *ssa.Program, lprog *loader.Program, ptaLog io.Writer, reflec
 	}
 	if testPkgs != nil {
 		for _, testPkg := range testPkgs {
-			if p := prog.CreateTestMainPackage(testPkg); p != nil {
+			p, err := testmain.CreateTestMainPackage(prog, testPkg)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			if p != nil {
 				mains = append(mains, p)
 			}
 		}
