@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/visualfc/fastmod"
+	"github.com/visualfc/gomod"
 	"github.com/visualfc/gotools/pkg/buildctx"
 	"github.com/visualfc/gotools/pkg/command"
 	"github.com/visualfc/gotools/pkg/pkgutil"
@@ -346,7 +346,7 @@ type PkgWalker struct {
 	ImportedFilesCheck map[string]*FilesCheck
 	gcimported         types.Importer
 	cmd                *command.Command
-	ModPkg             *fastmod.Package
+	Mod                *gomod.Package
 	findMode           *FindMode
 }
 
@@ -400,17 +400,17 @@ func (p *PkgWalker) Check(name string, conf *PkgConfig, cusror *FileCursor) (pkg
 	//p.Imported[name] = nil
 	p.importingName = make(map[string]bool)
 	// check go mod and skip GOROOT
-	p.ModPkg = nil
+	p.Mod = nil
 	var import_path string
 	if filepath.IsAbs(name) && !strings.HasPrefix(name, runtime.GOROOT()) {
-		p.ModPkg, _ = fastmod.LoadPackage(name, p.Context)
-		if p.ModPkg != nil {
-			dir := filepath.ToSlash(p.ModPkg.Node().ModDir())
+		p.Mod, _ = gomod.Load(name, p.Context)
+		if p.Mod != nil {
+			dir := filepath.ToSlash(p.Mod.Root().Dir)
 			fname := filepath.ToSlash(name)
 			if dir == fname {
-				import_path = p.ModPkg.Node().Path()
+				import_path = p.Mod.Root().Path
 			} else if strings.HasPrefix(fname, dir+"/") {
-				import_path = p.ModPkg.Node().Path() + fname[len(dir):]
+				import_path = p.Mod.Root().Path + fname[len(dir):]
 			}
 		}
 	}
@@ -438,9 +438,9 @@ func (w *PkgWalker) importPath(parentDir string, path string, mode build.ImportM
 	if stdlib.IsStdPkg(path) {
 		return stdlib.ImportStdPkg(w.Context, path, build.AllowBinary)
 	}
-	if w.ModPkg != nil {
-		_path, dir, _ := w.ModPkg.Lookup(path)
-		if dir != "" {
+	if w.Mod != nil {
+		_path, dir, found := w.Mod.Lookup(path)
+		if found {
 			pkg, err := w.Context.ImportDir(dir, mode)
 			if pkg != nil {
 				pkg.ImportPath = _path
@@ -505,7 +505,7 @@ func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path stri
 		if strings.HasPrefix(name, ".") {
 			name = filepath.Join(parentDir, name)
 		} else {
-			if w.ModPkg == nil && pkgutil.IsVendorExperiment() {
+			if w.Mod == nil && pkgutil.IsVendorExperiment() {
 				parentPkg := pkgutil.ImportDirEx(w.Context, parentDir)
 				var err error
 				name, err = pkgutil.VendoredImportPath(parentPkg, name)
@@ -1644,12 +1644,12 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 	}
 
 	//cursorPkgPath := cursorObj.Pkg().Path()
-	if w.ModPkg == nil && pkgutil.IsVendorExperiment() {
+	if w.Mod == nil && pkgutil.IsVendorExperiment() {
 		findPkgPath = pkgutil.VendorPathToImportPath(findPkgPath)
 	}
 	// check on module dir
-	if w.ModPkg != nil {
-		dir := w.ModPkg.Node().ModDir()
+	if w.Mod != nil {
+		dir := w.Mod.Root().Dir
 		filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 			if !info.IsDir() {
 				return nil
@@ -1665,7 +1665,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 				return nil
 			}
 			if !bp.IsCommand() {
-				importPath := w.ModPkg.Node().Path()
+				importPath := w.Mod.Root().Path
 				if path != dir {
 					importPath = filepath.Join(importPath, path[len(dir)+1:])
 				}
@@ -1699,7 +1699,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 	}
 	ctx := *w.Context
 	searchAll := true
-	if w.ModPkg != nil {
+	if w.Mod != nil {
 		ctx.GOPATH = ""
 		if w.findMode.SkipGoroot {
 			searchAll = false
