@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/visualfc/fastmod"
+	"github.com/visualfc/gomod"
 	"github.com/visualfc/gotools/pkg/command"
 	"github.com/visualfc/gotools/pkg/pkgutil"
 )
@@ -38,11 +38,10 @@ func runCheck(cmd *command.Command, args []string) error {
 	if flagCheckDir == "" || flagCheckDir == "." {
 		flagCheckDir, _ = os.Getwd()
 	}
-	mods := fastmod.NewModuleList(&build.Default)
-	mod, _ := mods.LoadModule(flagCheckDir)
+	mod, _ := gomod.Load(flagCheckDir, &build.Default)
 	if flagCheckName {
 		if mod != nil {
-			fmt.Println(mod.Path())
+			fmt.Println(mod.Root().Path)
 		} else {
 			_, fname := filepath.Split(flagCheckDir)
 			fmt.Println(fname)
