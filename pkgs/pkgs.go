@@ -251,15 +251,17 @@ func (p *PathPkgsIndex) LoadIndex(context build.Context, flag LoadFlag) {
 			srcDirs = append(srcDirs, filepath.Join(goroot, "src"))
 		}
 	}
-
+	iRoot := len(srcDirs)
 	context.GOPATH = gopath
 	context.GOROOT = ""
 	for _, v := range context.SrcDirs() {
 		srcDirs = append(srcDirs, v)
 	}
 	context.GOROOT = goroot
-	for _, path := range srcDirs {
+	for i, path := range srcDirs {
 		pi := &PkgsIndex{}
+		pi.Root = path
+		pi.Goroot = (i < iRoot)
 		p.Indexs = append(p.Indexs, pi)
 		pkgsGate.enter()
 		f, err := os.Open(path)
@@ -295,7 +297,9 @@ func (p *PathPkgsIndex) Sort() {
 
 type PkgsIndex struct {
 	sync.Mutex
-	Pkgs []*build.Package
+	Pkgs   []*build.Package
+	Root   string
+	Goroot bool
 }
 
 func (p *PkgsIndex) sort() {
@@ -379,7 +383,7 @@ func (p *PkgsIndex) loadPkgsPath(wg *sync.WaitGroup, root, pkgrelpath string) {
 			if buildPkg.ImportPath == "." {
 				buildPkg.ImportPath = filepath.ToSlash(pkgrelpath)
 				buildPkg.Root = root
-				buildPkg.Goroot = true
+				buildPkg.Goroot = p.Goroot
 			}
 			p.Lock()
 			p.Pkgs = append(p.Pkgs, buildPkg)
