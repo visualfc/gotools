@@ -1,6 +1,7 @@
 package gopls
 
 import (
+	_ "github.com/visualfc/gotools/gopls/golang_org_x_tools_gopls/lsp/protocol"
 	"github.com/visualfc/gotools/pkg/command"
 )
 
