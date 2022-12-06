@@ -13,17 +13,19 @@ var Command = &command.Command{
 }
 
 var (
-	flagServer bool
+	flagServer    bool
+	flagGoplsPath string
 )
 
 func init() {
 	Command.Flag.BoolVar(&flagServer, "s", false, "run gopls server")
+	Command.Flag.StringVar(&flagGoplsPath, "gopls", "gopls", "gopls filepath")
 }
 
 func runGopls(cmd *command.Command, args []string) error {
 	if flagServer {
 		srv := NewServer(&Client{})
-		err := srv.run("/Users/vfc/go/bin/gopls", "-v", "-rpc.trace")
+		err := srv.run(flagGoplsPath, "-v", "-rpc.trace")
 		if err != nil {
 			return err
 		}
