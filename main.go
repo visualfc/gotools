@@ -13,6 +13,7 @@ import (
 	"github.com/visualfc/gotools/goapi"
 	"github.com/visualfc/gotools/godoc"
 	"github.com/visualfc/gotools/gofmt"
+	"github.com/visualfc/gotools/gopls"
 	"github.com/visualfc/gotools/gopresent"
 	"github.com/visualfc/gotools/gotest"
 	"github.com/visualfc/gotools/jsonfmt"
@@ -43,6 +44,7 @@ func init() {
 	command.Register(debugflags.Command)
 	command.Register(pkgcheck.Command)
 	command.Register(godoc.Command)
+	command.Register(gopls.Command)
 }
 
 func main() {
