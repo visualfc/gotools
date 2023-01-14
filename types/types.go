@@ -291,27 +291,6 @@ type PkgConfig struct {
 	WithTestFiles    bool
 }
 
-func DefaultPkgConfig() *PkgConfig {
-	conf := &PkgConfig{IgnoreFuncBodies: false, AllowBinary: true, WithTestFiles: true}
-	conf.Info = &types.Info{
-		Uses:       make(map[*ast.Ident]types.Object),
-		Defs:       make(map[*ast.Ident]types.Object),
-		Selections: make(map[*ast.SelectorExpr]*types.Selection),
-		Types:      make(map[ast.Expr]types.TypeAndValue),
-		Scopes:     make(map[ast.Node]*types.Scope),
-		Implicits:  make(map[ast.Node]types.Object),
-	}
-	conf.XInfo = &types.Info{
-		Uses:       make(map[*ast.Ident]types.Object),
-		Defs:       make(map[*ast.Ident]types.Object),
-		Selections: make(map[*ast.SelectorExpr]*types.Selection),
-		Types:      make(map[ast.Expr]types.TypeAndValue),
-		Scopes:     make(map[ast.Node]*types.Scope),
-		Implicits:  make(map[ast.Node]types.Object),
-	}
-	return conf
-}
-
 func NewPkgConfig(ignoreFuncBodies bool, withTestFiles bool) *PkgConfig {
 	conf := &PkgConfig{IgnoreFuncBodies: ignoreFuncBodies, AllowBinary: true, WithTestFiles: withTestFiles}
 	conf.Info = &types.Info{
@@ -1342,6 +1321,28 @@ func (w *PkgWalker) LookupByText(pkgInfo *types.Info, text string) types.Object 
 	return cursorObj
 }
 
+func parserMethod(obj types.Object) (named *types.Named, method string, ok bool) {
+	if obj == nil {
+		return
+	}
+	sig, ok := obj.Type().(*types.Signature)
+	if !ok {
+		return
+	}
+	recv := sig.Recv()
+	if recv == nil {
+		return
+	}
+	typ := recv.Type()
+	if t, ok := typ.(*types.Pointer); ok {
+		typ = t.Elem()
+	}
+	named = typ.(*types.Named)
+	method = obj.Name()
+	ok = true
+	return
+}
+
 func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 	var cursorObj types.Object
 	var cursorSelection *types.Selection
@@ -1538,6 +1539,15 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 				importRange = append(importRange, findPackageImportRange(packagePath, conf.XTestFiles)...)
 			} else if w.findMode.Import {
 				usages = append(usages, findPackageImports(packageName, packagePath, conf.XTestFiles)...)
+			}
+		}
+	} else if enableTypeParams && kind == ObjMethod {
+		named, method, _ := parserMethod(cursorObj)
+		for id, obj := range pkgInfo.Uses {
+			if n, m, ok := parserMethod(obj); ok && m == method {
+				if sameNamed(named, n) {
+					usages = append(usages, int(id.Pos()))
+				}
 			}
 		}
 	} else {
