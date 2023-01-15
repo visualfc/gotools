@@ -8,15 +8,12 @@ import (
 	"bytes"
 	"fmt"
 	"go/build"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/visualfc/gotools/pkg/command"
 )
@@ -124,54 +121,7 @@ var (
 )
 
 // Fake package file and name for commands. Contains the command documentation.
-const fakePkgFile = "doc.go"
 const fakePkgName = "documentation"
-
-func textFmt(w io.Writer, format string, x ...interface{}) {
-	var buf bytes.Buffer
-	fmt.Fprint(&buf, x)
-	template.HTMLEscape(w, buf.Bytes())
-}
-
-func pathEscFmt(w io.Writer, format string, x ...interface{}) {
-	switch v := x[0].(type) {
-	case []byte:
-		template.HTMLEscape(w, v)
-	case string:
-		template.HTMLEscape(w, []byte(filepath.ToSlash(v)))
-	default:
-		var buf bytes.Buffer
-		fmt.Fprint(&buf, x)
-		template.HTMLEscape(w, buf.Bytes())
-	}
-}
-
-func htmlEscFmt(w io.Writer, format string, x ...interface{}) {
-	switch v := x[0].(type) {
-	case int:
-		template.HTMLEscape(w, []byte(strconv.Itoa(v)))
-	case []byte:
-		template.HTMLEscape(w, v)
-	case string:
-		template.HTMLEscape(w, []byte(v))
-	default:
-		var buf bytes.Buffer
-		fmt.Fprint(&buf, x)
-		template.HTMLEscape(w, buf.Bytes())
-	}
-}
-
-// Template formatter for "padding" format.
-func paddingFmt(w io.Writer, format string, x ...interface{}) {
-	for i := x[0].(int); i > 0; i-- {
-		fmt.Fprint(w, `<td width="25"></td>`)
-	}
-}
-
-// Template formatter for "time" format.
-func timeFmt(w io.Writer, format string, x ...interface{}) {
-	template.HTMLEscape(w, []byte(time.Unix(x[0].(int64)/1e9, 0).String()))
-}
 
 var fmap = template.FuncMap{
 	"repeat": strings.Repeat,
