@@ -100,20 +100,6 @@ func (doc *docReader) lookupTypeDoc(name string) *typeDoc {
 	return tdoc
 }
 
-func docBaseTypeName(typ ast.Expr, showAll bool) string {
-	switch t := typ.(type) {
-	case *ast.Ident:
-		// if the type is not exported, the effect to
-		// a client is as if there were no type name
-		if showAll || t.IsExported() {
-			return t.Name
-		}
-	case *ast.StarExpr:
-		return docBaseTypeName(t.X, showAll)
-	}
-	return ""
-}
-
 func (doc *docReader) addValue(decl *ast.GenDecl) {
 	// determine if decl should be associated with a type
 	// Heuristic: For each typed entry, determine the type name, if any.
