@@ -34,5 +34,5 @@ func DefaultPkgConfig() *PkgConfig {
 }
 
 func sameNamed(n1, n2 *types.Named) bool {
-	return n1.Origin() == n2.Origin()
+	return n1 != nil && n2 != nil && n1.Origin().String() == n2.Origin().String()
 }
