@@ -1172,7 +1172,7 @@ func IsSamePkg(a, b *types.Package) bool {
 	return a.Path() == b.Path()
 }
 
-func IsSameObject(a, b types.Object) bool {
+func IsSameObject(a, b types.Object, kind ObjKind) bool {
 	if a == b {
 		return true
 	}
@@ -1193,6 +1193,15 @@ func IsSameObject(a, b types.Object) bool {
 	if a.Id() != b.Id() {
 		return false
 	}
+
+	if enableTypeParams && kind == ObjMethod {
+		n1, m1, ok1 := parserMethod(a)
+		n2, m2, ok2 := parserMethod(b)
+		if ok1 && ok2 && m1 == m2 && sameNamed(n1, n2) {
+			return true
+		}
+	}
+
 	if a.Type().String() != b.Type().String() {
 		return false
 	}
@@ -1325,7 +1334,11 @@ func parserMethod(obj types.Object) (named *types.Named, method string, ok bool)
 	if obj == nil {
 		return
 	}
-	sig, ok := obj.Type().(*types.Signature)
+	typ := obj.Type()
+	if typ == nil {
+		return
+	}
+	sig, ok := typ.(*types.Signature)
 	if !ok {
 		return
 	}
@@ -1333,7 +1346,7 @@ func parserMethod(obj types.Object) (named *types.Named, method string, ok bool)
 	if recv == nil {
 		return
 	}
-	typ := recv.Type()
+	typ = recv.Type()
 	if t, ok := typ.(*types.Pointer); ok {
 		typ = t.Elem()
 	}
@@ -1600,7 +1613,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			// 	}
 			// }
 			for k, v := range addInfo.Uses {
-				if k != nil && v != nil && IsSameObject(v, cursorObj) {
+				if k != nil && v != nil && IsSameObject(v, cursorObj, kind) {
 					usages = append(usages, int(k.Pos()))
 				}
 			}
@@ -1787,14 +1800,14 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			} else {
 				if conf.Info != nil {
 					for k, v := range conf.Info.Uses {
-						if k != nil && v != nil && IsSameObject(v, cursorObj) {
+						if k != nil && v != nil && IsSameObject(v, cursorObj, kind) {
 							usages = append(usages, int(k.Pos()))
 						}
 					}
 				}
 				if conf.XInfo != nil {
 					for k, v := range conf.XInfo.Uses {
-						if k != nil && v != nil && IsSameObject(v, cursorObj) {
+						if k != nil && v != nil && IsSameObject(v, cursorObj, kind) {
 							usages = append(usages, int(k.Pos()))
 						}
 					}
@@ -1997,7 +2010,7 @@ func (w *PkgWalker) CheckObjectInfo(cursorObj types.Object, cursorSelection *typ
 		if pkg != nil {
 			if cursorIsInterfaceMethod {
 				for k, v := range conf.Info.Defs {
-					if k != nil && v != nil && IsSameObject(v, cursorInterfaceTypeNamed.Obj()) {
+					if k != nil && v != nil && IsSameObject(v, cursorInterfaceTypeNamed.Obj(), kind) {
 						named := v.Type().(*types.Named)
 						obj, typ := w.lookupNamedMethod(named, cursorObj.Name())
 						if obj != nil && typ != nil {
@@ -2032,7 +2045,7 @@ func (w *PkgWalker) CheckObjectInfo(cursorObj types.Object, cursorSelection *typ
 						continue
 					}
 					if _, ok := obj.(*types.TypeName); ok {
-						if IsSameObject(fieldTypeObj, obj) {
+						if IsSameObject(fieldTypeObj, obj, kind) {
 							if t, ok := obj.Type().Underlying().(*types.Struct); ok {
 								for i := 0; i < t.NumFields(); i++ {
 									if t.Field(i).Id() == cursorObj.Id() {
@@ -2047,7 +2060,7 @@ func (w *PkgWalker) CheckObjectInfo(cursorObj types.Object, cursorSelection *typ
 				}
 			} else {
 				for k, v := range conf.Info.Defs {
-					if k != nil && v != nil && IsSameObject(v, cursorObj) {
+					if k != nil && v != nil && IsSameObject(v, cursorObj, kind) {
 						cursorPos = k.Pos()
 						break
 					}
