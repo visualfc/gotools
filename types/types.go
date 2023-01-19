@@ -1330,6 +1330,14 @@ func (w *PkgWalker) LookupByText(pkgInfo *types.Info, text string) types.Object 
 	return cursorObj
 }
 
+func parseNamed(typ types.Type) (named *types.Named, ok bool) {
+	if t, ok := typ.(*types.Pointer); ok {
+		typ = t.Elem()
+	}
+	named, ok = typ.(*types.Named)
+	return
+}
+
 func parserMethod(obj types.Object) (named *types.Named, method string, ok bool) {
 	if obj == nil {
 		return
@@ -1553,13 +1561,29 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 				usages = append(usages, findPackageImports(packageName, packagePath, conf.XTestFiles)...)
 			}
 		}
-	} else if enableTypeParams && kind == ObjMethod {
-		named, method, ok := parserMethod(cursorObj)
-		if ok {
-			for id, obj := range pkgInfo.Uses {
-				if n, m, ok := parserMethod(obj); ok && m == method {
-					if sameNamed(named, n) {
-						usages = append(usages, int(id.Pos()))
+	} else if enableTypeParams {
+		if kind == ObjMethod {
+			named, method, ok := parserMethod(cursorObj)
+			if ok {
+				for id, obj := range pkgInfo.Uses {
+					if n, m, ok := parserMethod(obj); ok && m == method {
+						if sameNamed(named, n) {
+							usages = append(usages, int(id.Pos()))
+						}
+					}
+				}
+			}
+		} else if kind == ObjField && findInfo.fieldTypeObj != nil {
+			named, ok := parseNamed(findInfo.fieldTypeObj.Type())
+			if ok {
+				fieldName := cursorObj.Name()
+				for id, sel := range pkgInfo.Selections {
+					if id.Sel.Name == fieldName {
+						if m, ok := parseNamed(sel.Recv()); ok {
+							if sameNamed(m, named) {
+								usages = append(usages, int(id.Sel.Pos()))
+							}
+						}
 					}
 				}
 			}
@@ -1979,30 +2003,34 @@ func (w *PkgWalker) CheckObjectInfo(cursorObj types.Object, cursorSelection *typ
 				}
 			}
 		}
-	} else if kind == ObjField && cursorSelection != nil {
-		if recv := cursorSelection.Recv(); recv != nil {
-			typ := orgType(recv)
-			if typ != nil {
-				if name, ok := typ.(*types.Named); ok {
-					fieldTypeObj = name.Obj()
-					na := w.lookupNamedField(name, cursorObj.Name())
-					if na != nil {
-						fieldTypeObj = na.Obj()
-					}
-					//check current pkg
-					if fieldTypeObj != nil && fieldTypeObj.Pkg() == pkg {
-						cursorPkg = fieldTypeObj.Pkg()
-						if t, ok := fieldTypeObj.Type().Underlying().(*types.Struct); ok {
-							for i := 0; i < t.NumFields(); i++ {
-								if t.Field(i).Id() == cursorObj.Id() {
-									cursorPos = t.Field(i).Pos()
-									break
+	} else if kind == ObjField {
+		if cursorSelection != nil {
+			if recv := cursorSelection.Recv(); recv != nil {
+				typ := orgType(recv)
+				if typ != nil {
+					if name, ok := typ.(*types.Named); ok {
+						fieldTypeObj = name.Obj()
+						na := w.lookupNamedField(name, cursorObj.Name())
+						if na != nil {
+							fieldTypeObj = na.Obj()
+						}
+						//check current pkg
+						if fieldTypeObj != nil && fieldTypeObj.Pkg() == pkg {
+							cursorPkg = fieldTypeObj.Pkg()
+							if t, ok := fieldTypeObj.Type().Underlying().(*types.Struct); ok {
+								for i := 0; i < t.NumFields(); i++ {
+									if t.Field(i).Id() == cursorObj.Id() {
+										cursorPos = t.Field(i).Pos()
+										break
+									}
 								}
 							}
 						}
 					}
 				}
 			}
+		} else {
+			fieldTypeObj = w.LookupStructFromField(pkgInfo, pkg, cursorObj, cursorPos)
 		}
 	}
 	if cursorPkg != nil && cursorPkg != pkg &&
@@ -2075,6 +2103,7 @@ func (w *PkgWalker) CheckObjectInfo(cursorObj types.Object, cursorSelection *typ
 	return &ObjectInfo{
 		cursorPkg,
 		cursorObj,
+		fieldTypeObj,
 		cursorPos,
 		cursorIsInterfaceMethod,
 		cursorInterfaceTypeName,
@@ -2084,6 +2113,7 @@ func (w *PkgWalker) CheckObjectInfo(cursorObj types.Object, cursorSelection *typ
 type ObjectInfo struct {
 	pkg               *types.Package
 	obj               types.Object
+	fieldTypeObj      types.Object
 	pos               token.Pos
 	isInterfaceMethod bool
 	interfaceTypeName string
