@@ -1350,9 +1350,8 @@ func parserMethod(obj types.Object) (named *types.Named, method string, ok bool)
 	if t, ok := typ.(*types.Pointer); ok {
 		typ = t.Elem()
 	}
-	named = typ.(*types.Named)
+	named, ok = typ.(*types.Named)
 	method = obj.Name()
-	ok = true
 	return
 }
 
@@ -1555,11 +1554,13 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			}
 		}
 	} else if enableTypeParams && kind == ObjMethod {
-		named, method, _ := parserMethod(cursorObj)
-		for id, obj := range pkgInfo.Uses {
-			if n, m, ok := parserMethod(obj); ok && m == method {
-				if sameNamed(named, n) {
-					usages = append(usages, int(id.Pos()))
+		named, method, ok := parserMethod(cursorObj)
+		if ok {
+			for id, obj := range pkgInfo.Uses {
+				if n, m, ok := parserMethod(obj); ok && m == method {
+					if sameNamed(named, n) {
+						usages = append(usages, int(id.Pos()))
+					}
 				}
 			}
 		}
