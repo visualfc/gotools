@@ -1638,18 +1638,9 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 					usages = append(usages, int(k.Pos()))
 				}
 			}
-
 			if importRange != nil {
-				sort.Sort(ExprSlice(importRange))
-				for _, expr := range importRange {
-					pos := w.FileSet.Position(expr.Pos() + 1)
-					pos.String()
-					w.cmd.Printf("%s:%d:%d-%d\n",
-						pos.Filename, pos.Line, pos.Column,
-						pos.Column+int(expr.End())-int(expr.Pos())-2)
-				}
+				w.printImportRange(importRange)
 			}
-
 			w.printUsages(usages)
 		}
 	}
@@ -1829,18 +1820,21 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		}
 
 		if importRange != nil {
-			sort.Sort(ExprSlice(importRange))
-			for _, expr := range importRange {
-				pos := w.FileSet.Position(expr.Pos() + 1)
-				pos.String()
-				w.cmd.Printf("%s:%d:%d-%d\n",
-					pos.Filename, pos.Line, pos.Column,
-					pos.Column+int(expr.End())-int(expr.Pos())-2)
-			}
+			w.printImportRange(importRange)
 		}
 		w.printUsages(usages)
 	}
 	return nil
+}
+
+func (w *PkgWalker) printImportRange(importRange []ast.Expr) {
+	sort.Sort(ExprSlice(importRange))
+	for _, expr := range importRange {
+		pos := w.FileSet.Position(expr.Pos() + 1)
+		w.cmd.Printf("%s:%d:%d-%d\n",
+			pos.Filename, pos.Line, pos.Column,
+			pos.Column+int(expr.End())-int(expr.Pos())-2)
+	}
 }
 
 func (w *PkgWalker) printUsages(usages []int) {
