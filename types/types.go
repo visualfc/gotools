@@ -1822,18 +1822,10 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 				}
 			} else {
 				if conf.Info != nil {
-					for k, v := range conf.Info.Uses {
-						if k != nil && v != nil && IsSameObject(v, cursorObj, kind) {
-							usages = append(usages, int(k.Pos()))
-						}
-					}
+					usages = append(usages, findObjectUses(cursorObj, kind, findInfo, conf.Info)...)
 				}
 				if conf.XInfo != nil {
-					for k, v := range conf.XInfo.Uses {
-						if k != nil && v != nil && IsSameObject(v, cursorObj, kind) {
-							usages = append(usages, int(k.Pos()))
-						}
-					}
+					usages = append(usages, findObjectUses(cursorObj, kind, findInfo, conf.XInfo)...)
 				}
 			}
 		}
@@ -1857,6 +1849,15 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		}
 	}
 	return nil
+}
+
+func findObjectUses(cursorObj types.Object, kind ObjKind, findInfo *ObjectInfo, pkgInfo *types.Info) (usages []int) {
+	for k, v := range pkgInfo.Uses {
+		if k != nil && v != nil && IsSameObject(v, cursorObj, kind) {
+			usages = append(usages, int(k.Pos()))
+		}
+	}
+	return usages
 }
 
 func findPackageDef(pkgname string, files map[string]*ast.File) (pos []int) {
