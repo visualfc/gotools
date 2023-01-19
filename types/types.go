@@ -1446,7 +1446,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		w.printDefine(isImport, packageName, packagePath, findInfo)
 	}
 	if w.findMode.Info {
-		w.printInfo(cursorObj, kind, packageName, packagePath, findInfo, cursorPkg)
+		w.printInfo(cursorObj, kind, packageName, packagePath, findInfo)
 	}
 	if w.findMode.Doc && w.findMode.Define {
 		pos := w.FileSet.Position(cursorPos)
@@ -1759,7 +1759,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 	return nil
 }
 
-func (w *PkgWalker) printInfo(cursorObj types.Object, kind ObjKind, packageName, packagePath string, findInfo *ObjectInfo, cursorPkg *types.Package) {
+func (w *PkgWalker) printInfo(cursorObj types.Object, kind ObjKind, packageName, packagePath string, findInfo *ObjectInfo) {
 	if kind == ObjBuiltin {
 		w.cmd.Println(builtinInfo(cursorObj.Name()))
 	} else if kind == ObjPackage {
@@ -1777,11 +1777,11 @@ func (w *PkgWalker) printInfo(cursorObj types.Object, kind ObjKind, packageName,
 	} else if kind == ObjImplicit {
 		w.cmd.Printf("%s is implicit\n", cursorObj)
 	} else if findInfo.isInterfaceMethod {
-		if cursorPkg == nil {
+		if findInfo.pkg == nil {
 			// error.Error()
 			w.cmd.Println(simpleObjInfo(findInfo.obj))
 		} else {
-			w.cmd.Println(strings.Replace(simpleObjInfo(findInfo.obj), "(interface)", cursorPkg.Name()+"."+findInfo.interfaceTypeName, 1))
+			w.cmd.Println(strings.Replace(simpleObjInfo(findInfo.obj), "(interface)", findInfo.pkg.Name()+"."+findInfo.interfaceTypeName, 1))
 		}
 	} else {
 		w.cmd.Println(simpleObjInfo(cursorObj))
