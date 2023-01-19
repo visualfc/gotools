@@ -1508,19 +1508,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		pos := w.FileSet.Position(cursorPos)
 		file := w.ParsedFileCache[pos.Filename]
 		if file != nil {
-			line := pos.Line
-			var group *ast.CommentGroup
-			for _, v := range file.Comments {
-				lastLine := w.FileSet.Position(v.End()).Line
-				if lastLine == line || lastLine == line-1 {
-					group = v
-				} else if lastLine > line {
-					break
-				}
-			}
-			if group != nil {
-				w.cmd.Println(group.Text())
-			}
+			w.printDoc(pos, file)
 		}
 	}
 
@@ -1825,6 +1813,22 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		w.printUsages(usages)
 	}
 	return nil
+}
+
+func (w *PkgWalker) printDoc(pos token.Position, file *ast.File) {
+	line := pos.Line
+	var group *ast.CommentGroup
+	for _, v := range file.Comments {
+		lastLine := w.FileSet.Position(v.End()).Line
+		if lastLine == line || lastLine == line-1 {
+			group = v
+		} else if lastLine > line {
+			break
+		}
+	}
+	if group != nil {
+		w.cmd.Println(group.Text())
+	}
 }
 
 func (w *PkgWalker) printImportRange(importRange []ast.Expr) {
