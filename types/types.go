@@ -2118,12 +2118,12 @@ func (w *PkgWalker) CheckObjectInfo(cursorObj types.Object, cursorSelection *typ
 		//		}
 	}
 	return &ObjectInfo{
-		cursorPkg,
-		cursorObj,
-		fieldTypeObj,
-		cursorPos,
-		cursorIsInterfaceMethod,
-		cursorInterfaceTypeName,
+		pkg:               cursorPkg,
+		obj:               cursorObj,
+		fieldTypeObj:      fieldTypeObj,
+		pos:               cursorPos,
+		isInterfaceMethod: cursorIsInterfaceMethod,
+		interfaceTypeName: cursorInterfaceTypeName,
 	}
 }
 
