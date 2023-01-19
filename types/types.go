@@ -1449,11 +1449,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		w.printInfo(cursorObj, kind, packageName, packagePath, findInfo)
 	}
 	if w.findMode.Doc && w.findMode.Define {
-		pos := w.FileSet.Position(cursorPos)
-		file := w.ParsedFileCache[pos.Filename]
-		if file != nil {
-			w.printDoc(pos, file)
-		}
+		w.printDoc(cursorPos)
 	}
 
 	if !w.findMode.Usage {
@@ -1814,7 +1810,12 @@ func (w *PkgWalker) printDefine(isImport bool, fname, fpath string, findInfo *Ob
 	}
 }
 
-func (w *PkgWalker) printDoc(pos token.Position, file *ast.File) {
+func (w *PkgWalker) printDoc(cursorPos token.Pos) {
+	pos := w.FileSet.Position(cursorPos)
+	file := w.ParsedFileCache[pos.Filename]
+	if file == nil {
+		return
+	}
 	line := pos.Line
 	var group *ast.CommentGroup
 	for _, v := range file.Comments {
