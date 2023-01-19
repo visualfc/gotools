@@ -1541,11 +1541,13 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			}
 		}
 	} else if enableTypeParams && kind == ObjMethod {
-		named, method, _ := parserMethod(cursorObj)
-		for id, obj := range pkgInfo.Uses {
-			if n, m, ok := parserMethod(obj); ok && m == method {
-				if sameNamed(named, n) {
-					usages = append(usages, int(id.Pos()))
+		named, method, ok := parserMethod(cursorObj)
+		if ok {
+			for id, obj := range pkgInfo.Uses {
+				if n, m, ok := parserMethod(obj); ok && m == method {
+					if sameNamed(named, n) {
+						usages = append(usages, int(id.Pos()))
+					}
 				}
 			}
 		}
