@@ -1446,39 +1446,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		w.printDefine(isImport, packageName, packagePath, findInfo)
 	}
 	if w.findMode.Info {
-		// if kind == ObjField && fieldTypeObj != nil {
-		// 	typeName := fieldTypeObj.Name()
-		// 	if fieldTypeObj.Pkg() != nil && fieldTypeObj.Pkg() != pkg {
-		// 		typeName = fieldTypeObj.Pkg().Name() + "." + fieldTypeObj.Name()
-		// 	}
-		// 	fmt.Println(typeName, simpleObjInfo(cursorObj))
-		// } else
-		if kind == ObjBuiltin {
-			w.cmd.Println(builtinInfo(cursorObj.Name()))
-		} else if kind == ObjPackage {
-			if packageName == packagePath {
-				w.cmd.Printf("package %s\n", packageName)
-			} else {
-				w.cmd.Printf("package %s (%q)\n", packageName, packagePath)
-			}
-		} else if kind == ObjPkgName {
-			if packageName == packagePath {
-				w.cmd.Printf("package %s\n", packageName)
-			} else {
-				w.cmd.Printf("package %s (%q)\n", packageName, packagePath)
-			}
-		} else if kind == ObjImplicit {
-			w.cmd.Printf("%s is implicit\n", cursorObj)
-		} else if findInfo.isInterfaceMethod {
-			if cursorPkg == nil {
-				// error.Error()
-				w.cmd.Println(simpleObjInfo(findInfo.obj))
-			} else {
-				w.cmd.Println(strings.Replace(simpleObjInfo(findInfo.obj), "(interface)", cursorPkg.Name()+"."+findInfo.interfaceTypeName, 1))
-			}
-		} else {
-			w.cmd.Println(simpleObjInfo(cursorObj))
-		}
+		w.printInfo(cursorObj, kind, packageName, packagePath, findInfo, cursorPkg)
 	}
 	if w.findMode.Doc && w.findMode.Define {
 		pos := w.FileSet.Position(cursorPos)
@@ -1789,6 +1757,35 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		w.printUsages(usages)
 	}
 	return nil
+}
+
+func (w *PkgWalker) printInfo(cursorObj types.Object, kind ObjKind, packageName, packagePath string, findInfo *ObjectInfo, cursorPkg *types.Package) {
+	if kind == ObjBuiltin {
+		w.cmd.Println(builtinInfo(cursorObj.Name()))
+	} else if kind == ObjPackage {
+		if packageName == packagePath {
+			w.cmd.Printf("package %s\n", packageName)
+		} else {
+			w.cmd.Printf("package %s (%q)\n", packageName, packagePath)
+		}
+	} else if kind == ObjPkgName {
+		if packageName == packagePath {
+			w.cmd.Printf("package %s\n", packageName)
+		} else {
+			w.cmd.Printf("package %s (%q)\n", packageName, packagePath)
+		}
+	} else if kind == ObjImplicit {
+		w.cmd.Printf("%s is implicit\n", cursorObj)
+	} else if findInfo.isInterfaceMethod {
+		if cursorPkg == nil {
+			// error.Error()
+			w.cmd.Println(simpleObjInfo(findInfo.obj))
+		} else {
+			w.cmd.Println(strings.Replace(simpleObjInfo(findInfo.obj), "(interface)", cursorPkg.Name()+"."+findInfo.interfaceTypeName, 1))
+		}
+	} else {
+		w.cmd.Println(simpleObjInfo(cursorObj))
+	}
 }
 
 func (w *PkgWalker) printDefine(isImport bool, fname, fpath string, findInfo *ObjectInfo) {
