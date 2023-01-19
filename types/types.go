@@ -1,4 +1,4 @@
-// Copyright 2011-2018 visualfc <visualfc@gmail.com>. All rights reserved.
+// Copyright 2011-2023 visualfc <visualfc@gmail.com>. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -1443,85 +1443,13 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 	cursorPos = findInfo.pos
 
 	if w.findMode.Define {
-		if isImport {
-			var fname = packageName
-			var fpath = packagePath
-			var findpath string = fpath
-			//check imported and vendor
-			for _, v := range w.Imported {
-				vpath := v.Path()
-				pos := strings.Index(vpath, "/vendor/")
-				if pos >= 0 {
-					vpath = vpath[pos+8:]
-				}
-				if vpath == fpath {
-					findpath = v.Path()
-					break
-				}
-			}
-			bp, err := w.importPath("", findpath, build.FindOnly)
-			if err == nil {
-				w.cmd.Println(w.FileSet.Position(findInfo.pos).String() + "::" + fname + "::" + fpath + "::" + bp.Dir)
-			} else {
-				w.cmd.Println(w.FileSet.Position(findInfo.pos))
-			}
-		} else {
-			w.cmd.Println(w.FileSet.Position(findInfo.pos))
-		}
+		w.printDefine(isImport, packageName, packagePath, findInfo)
 	}
 	if w.findMode.Info {
-		// if kind == ObjField && fieldTypeObj != nil {
-		// 	typeName := fieldTypeObj.Name()
-		// 	if fieldTypeObj.Pkg() != nil && fieldTypeObj.Pkg() != pkg {
-		// 		typeName = fieldTypeObj.Pkg().Name() + "." + fieldTypeObj.Name()
-		// 	}
-		// 	fmt.Println(typeName, simpleObjInfo(cursorObj))
-		// } else
-		if kind == ObjBuiltin {
-			w.cmd.Println(builtinInfo(cursorObj.Name()))
-		} else if kind == ObjPackage {
-			if packageName == packagePath {
-				w.cmd.Printf("package %s\n", packageName)
-			} else {
-				w.cmd.Printf("package %s (%q)\n", packageName, packagePath)
-			}
-		} else if kind == ObjPkgName {
-			if packageName == packagePath {
-				w.cmd.Printf("package %s\n", packageName)
-			} else {
-				w.cmd.Printf("package %s (%q)\n", packageName, packagePath)
-			}
-		} else if kind == ObjImplicit {
-			w.cmd.Printf("%s is implicit\n", cursorObj)
-		} else if findInfo.isInterfaceMethod {
-			if cursorPkg == nil {
-				// error.Error()
-				w.cmd.Println(simpleObjInfo(findInfo.obj))
-			} else {
-				w.cmd.Println(strings.Replace(simpleObjInfo(findInfo.obj), "(interface)", cursorPkg.Name()+"."+findInfo.interfaceTypeName, 1))
-			}
-		} else {
-			w.cmd.Println(simpleObjInfo(cursorObj))
-		}
+		w.printInfo(cursorObj, kind, packageName, packagePath, findInfo)
 	}
 	if w.findMode.Doc && w.findMode.Define {
-		pos := w.FileSet.Position(cursorPos)
-		file := w.ParsedFileCache[pos.Filename]
-		if file != nil {
-			line := pos.Line
-			var group *ast.CommentGroup
-			for _, v := range file.Comments {
-				lastLine := w.FileSet.Position(v.End()).Line
-				if lastLine == line || lastLine == line-1 {
-					group = v
-				} else if lastLine > line {
-					break
-				}
-			}
-			if group != nil {
-				w.cmd.Println(group.Text())
-			}
-		}
+		w.printDoc(cursorPos)
 	}
 
 	if !w.findMode.Usage {
@@ -1616,10 +1544,8 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		usages = append(usages, int(cursorPos))
 	}
 
-	(sort.IntSlice(usages)).Sort()
-	for _, pos := range usages {
-		w.cmd.Println(w.FileSet.Position(token.Pos(pos)))
-	}
+	w.printUsages(usages)
+
 	//check look for current pkg.object on pkg_test
 	if w.findMode.UsageAll || IsSamePkg(cursorPkg, conf.Pkg) || IsSamePkg(cursorPkg, conf.XPkg) {
 		var addInfo *types.Info
@@ -1640,22 +1566,10 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 					usages = append(usages, int(k.Pos()))
 				}
 			}
-
 			if importRange != nil {
-				sort.Sort(ExprSlice(importRange))
-				for _, expr := range importRange {
-					pos := w.FileSet.Position(expr.Pos() + 1)
-					pos.String()
-					w.cmd.Printf("%s:%d:%d-%d\n",
-						pos.Filename, pos.Line, pos.Column,
-						pos.Column+int(expr.End())-int(expr.Pos())-2)
-				}
+				w.printImportRange(importRange)
 			}
-
-			(sort.IntSlice(usages)).Sort()
-			for _, pos := range usages {
-				w.cmd.Println(w.FileSet.Position(token.Pos(pos)))
-			}
+			w.printUsages(usages)
 		}
 	}
 
@@ -1834,21 +1748,109 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		}
 
 		if importRange != nil {
-			sort.Sort(ExprSlice(importRange))
-			for _, expr := range importRange {
-				pos := w.FileSet.Position(expr.Pos() + 1)
-				pos.String()
-				w.cmd.Printf("%s:%d:%d-%d\n",
-					pos.Filename, pos.Line, pos.Column,
-					pos.Column+int(expr.End())-int(expr.Pos())-2)
-			}
+			w.printImportRange(importRange)
 		}
-		(sort.IntSlice(usages)).Sort()
-		for _, pos := range usages {
-			w.cmd.Println(w.FileSet.Position(token.Pos(pos)))
-		}
+		w.printUsages(usages)
 	}
 	return nil
+}
+
+func (w *PkgWalker) printInfo(cursorObj types.Object, kind ObjKind, packageName, packagePath string, findInfo *ObjectInfo) {
+	if kind == ObjBuiltin {
+		w.cmd.Println(builtinInfo(cursorObj.Name()))
+	} else if kind == ObjPackage {
+		if packageName == packagePath {
+			w.cmd.Printf("package %s\n", packageName)
+		} else {
+			w.cmd.Printf("package %s (%q)\n", packageName, packagePath)
+		}
+	} else if kind == ObjPkgName {
+		if packageName == packagePath {
+			w.cmd.Printf("package %s\n", packageName)
+		} else {
+			w.cmd.Printf("package %s (%q)\n", packageName, packagePath)
+		}
+	} else if kind == ObjImplicit {
+		w.cmd.Printf("%s is implicit\n", cursorObj)
+	} else if findInfo.isInterfaceMethod {
+		if findInfo.pkg == nil {
+			// error.Error()
+			w.cmd.Println(simpleObjInfo(findInfo.obj))
+		} else {
+			w.cmd.Println(strings.Replace(simpleObjInfo(findInfo.obj), "(interface)", findInfo.pkg.Name()+"."+findInfo.interfaceTypeName, 1))
+		}
+	} else {
+		w.cmd.Println(simpleObjInfo(cursorObj))
+	}
+}
+
+func (w *PkgWalker) printDefine(isImport bool, fname, fpath string, findInfo *ObjectInfo) {
+	if isImport {
+		var findpath string = fpath
+		//check imported and vendor
+		for _, v := range w.Imported {
+			vpath := v.Path()
+			pos := strings.Index(vpath, "/vendor/")
+			if pos >= 0 {
+				vpath = vpath[pos+8:]
+			}
+			if vpath == fpath {
+				findpath = v.Path()
+				break
+			}
+		}
+		bp, err := w.importPath("", findpath, build.FindOnly)
+		if err == nil {
+			w.cmd.Println(w.FileSet.Position(findInfo.pos).String() + "::" + fname + "::" + fpath + "::" + bp.Dir)
+		} else {
+			w.cmd.Println(w.FileSet.Position(findInfo.pos))
+		}
+	} else {
+		w.cmd.Println(w.FileSet.Position(findInfo.pos))
+	}
+}
+
+func (w *PkgWalker) printDoc(cursorPos token.Pos) {
+	pos := w.FileSet.Position(cursorPos)
+	file := w.ParsedFileCache[pos.Filename]
+	if file == nil {
+		return
+	}
+	line := pos.Line
+	var group *ast.CommentGroup
+	for _, v := range file.Comments {
+		lastLine := w.FileSet.Position(v.End()).Line
+		if lastLine == line || lastLine == line-1 {
+			group = v
+		} else if lastLine > line {
+			break
+		}
+	}
+	if group != nil {
+		w.cmd.Println(group.Text())
+	}
+}
+
+func (w *PkgWalker) printImportRange(importRange []ast.Expr) {
+	sort.Sort(ExprSlice(importRange))
+	for _, expr := range importRange {
+		pos := w.FileSet.Position(expr.Pos() + 1)
+		w.cmd.Printf("%s:%d:%d-%d\n",
+			pos.Filename, pos.Line, pos.Column,
+			pos.Column+int(expr.End())-int(expr.Pos())-2)
+	}
+}
+
+func (w *PkgWalker) printUsages(usages []int) {
+	(sort.IntSlice(usages)).Sort()
+	var last int = -1
+	for _, pos := range usages {
+		if pos == last {
+			continue
+		}
+		last = pos
+		w.cmd.Println(w.FileSet.Position(token.Pos(pos)))
+	}
 }
 
 func findObjectUses(cursorObj types.Object, kind ObjKind, findInfo *ObjectInfo, pkgInfo *types.Info) (usages []int) {
@@ -2116,12 +2118,12 @@ func (w *PkgWalker) CheckObjectInfo(cursorObj types.Object, cursorSelection *typ
 		//		}
 	}
 	return &ObjectInfo{
-		cursorPkg,
-		cursorObj,
-		fieldTypeObj,
-		cursorPos,
-		cursorIsInterfaceMethod,
-		cursorInterfaceTypeName,
+		pkg:               cursorPkg,
+		obj:               cursorObj,
+		fieldTypeObj:      fieldTypeObj,
+		pos:               cursorPos,
+		isInterfaceMethod: cursorIsInterfaceMethod,
+		interfaceTypeName: cursorInterfaceTypeName,
 	}
 }
 
