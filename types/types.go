@@ -1337,9 +1337,8 @@ func parserMethod(obj types.Object) (named *types.Named, method string, ok bool)
 	if t, ok := typ.(*types.Pointer); ok {
 		typ = t.Elem()
 	}
-	named = typ.(*types.Named)
+	named, ok = typ.(*types.Named)
 	method = obj.Name()
-	ok = true
 	return
 }
 
