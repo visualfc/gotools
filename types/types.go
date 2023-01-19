@@ -1561,28 +1561,26 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 				usages = append(usages, findPackageImports(packageName, packagePath, conf.XTestFiles)...)
 			}
 		}
-	} else if enableTypeParams {
-		if kind == ObjMethod {
-			named, method, ok := parserMethod(cursorObj)
-			if ok {
-				for id, obj := range pkgInfo.Uses {
-					if n, m, ok := parserMethod(obj); ok && m == method {
-						if sameNamed(named, n) {
-							usages = append(usages, int(id.Pos()))
-						}
+	} else if enableTypeParams && kind == ObjMethod {
+		named, method, ok := parserMethod(cursorObj)
+		if ok {
+			for id, obj := range pkgInfo.Uses {
+				if n, m, ok := parserMethod(obj); ok && m == method {
+					if sameNamed(named, n) {
+						usages = append(usages, int(id.Pos()))
 					}
 				}
 			}
-		} else if kind == ObjField && findInfo.fieldTypeObj != nil {
-			named, ok := parseNamed(findInfo.fieldTypeObj.Type())
-			if ok {
-				fieldName := cursorObj.Name()
-				for id, sel := range pkgInfo.Selections {
-					if id.Sel.Name == fieldName {
-						if m, ok := parseNamed(sel.Recv()); ok {
-							if sameNamed(m, named) {
-								usages = append(usages, int(id.Sel.Pos()))
-							}
+		}
+	} else if enableTypeParams && kind == ObjField && findInfo.fieldTypeObj != nil {
+		named, ok := parseNamed(findInfo.fieldTypeObj.Type())
+		if ok {
+			fieldName := cursorObj.Name()
+			for id, sel := range pkgInfo.Selections {
+				if id.Sel.Name == fieldName {
+					if m, ok := parseNamed(sel.Recv()); ok {
+						if sameNamed(m, named) {
+							usages = append(usages, int(id.Sel.Pos()))
 						}
 					}
 				}
