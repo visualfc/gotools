@@ -1616,10 +1616,8 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 		usages = append(usages, int(cursorPos))
 	}
 
-	(sort.IntSlice(usages)).Sort()
-	for _, pos := range usages {
-		w.cmd.Println(w.FileSet.Position(token.Pos(pos)))
-	}
+	w.printUsages(usages)
+
 	//check look for current pkg.object on pkg_test
 	if w.findMode.UsageAll || IsSamePkg(cursorPkg, conf.Pkg) || IsSamePkg(cursorPkg, conf.XPkg) {
 		var addInfo *types.Info
@@ -1652,10 +1650,7 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 				}
 			}
 
-			(sort.IntSlice(usages)).Sort()
-			for _, pos := range usages {
-				w.cmd.Println(w.FileSet.Position(token.Pos(pos)))
-			}
+			w.printUsages(usages)
 		}
 	}
 
@@ -1843,12 +1838,21 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 					pos.Column+int(expr.End())-int(expr.Pos())-2)
 			}
 		}
-		(sort.IntSlice(usages)).Sort()
-		for _, pos := range usages {
-			w.cmd.Println(w.FileSet.Position(token.Pos(pos)))
-		}
+		w.printUsages(usages)
 	}
 	return nil
+}
+
+func (w *PkgWalker) printUsages(usages []int) {
+	(sort.IntSlice(usages)).Sort()
+	var last int = -1
+	for _, pos := range usages {
+		if pos == last {
+			continue
+		}
+		last = pos
+		w.cmd.Println(w.FileSet.Position(token.Pos(pos)))
+	}
 }
 
 func findObjectUses(cursorObj types.Object, kind ObjKind, findInfo *ObjectInfo, pkgInfo *types.Info) (usages []int) {
