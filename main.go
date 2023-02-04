@@ -47,7 +47,7 @@ func init() {
 
 func main() {
 	command.AppName = "gotools"
-	command.AppVersion = "1.12"
+	command.AppVersion = "1.4"
 	command.AppInfo = "Go tools for liteide."
 	command.Main()
 }
