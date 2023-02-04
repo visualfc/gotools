@@ -60,7 +60,7 @@ var (
 	typesTagList         = []string{} // exploded version of tags flag; set in main
 )
 
-//func init
+// func init
 func init() {
 	Command.Flag.BoolVar(&typesVerbose, "v", false, "verbose debugging")
 	Command.Flag.BoolVar(&typesAllowBinary, "b", false, "import can be satisfied by a compiled package object without corresponding sources.")
@@ -1500,21 +1500,22 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 				}
 			}
 		}
-	} else if enableTypeParams && kind == ObjField && findInfo.fieldTypeObj != nil {
-		named, ok := parseNamed(findInfo.fieldTypeObj.Type())
-		if ok {
-			fieldName := cursorObj.Name()
-			for id, sel := range pkgInfo.Selections {
-				if id.Sel.Name == fieldName {
-					if m, ok := parseNamed(sel.Recv()); ok {
-						if sameNamed(m, named) {
-							usages = append(usages, int(id.Sel.Pos()))
+	} else {
+		if enableTypeParams && kind == ObjField && findInfo.fieldTypeObj != nil {
+			named, ok := parseNamed(findInfo.fieldTypeObj.Type())
+			if ok {
+				fieldName := cursorObj.Name()
+				for id, sel := range pkgInfo.Selections {
+					if id.Sel.Name == fieldName {
+						if m, ok := parseNamed(sel.Recv()); ok {
+							if sameNamed(m, named) {
+								usages = append(usages, int(id.Sel.Pos()))
+							}
 						}
 					}
 				}
 			}
 		}
-	} else {
 		if cursorObj != nil {
 			for id, obj := range pkgInfo.Uses {
 				if obj == cursorObj { //!= nil && cursorObj.Pos() == obj.Pos() {
@@ -1854,7 +1855,7 @@ func (w *PkgWalker) printUsages(usages []int) {
 }
 
 func findObjectUses(cursorObj types.Object, kind ObjKind, findInfo *ObjectInfo, pkgInfo *types.Info) (usages []int) {
-	if enableTypeParams && kind == ObjField && findInfo != nil {
+	if enableTypeParams && kind == ObjField && findInfo.fieldTypeObj != nil {
 		named, ok := parseNamed(findInfo.fieldTypeObj.Type())
 		if ok {
 			fieldName := cursorObj.Name()
@@ -1867,7 +1868,6 @@ func findObjectUses(cursorObj types.Object, kind ObjKind, findInfo *ObjectInfo, 
 					}
 				}
 			}
-			return
 		}
 	}
 	for k, v := range pkgInfo.Uses {
