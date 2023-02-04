@@ -14,6 +14,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/visualfc/gotools/pkg/command"
@@ -30,11 +32,13 @@ var Command = &command.Command{
 var astViewStdin bool
 var astViewShowEndPos bool
 var astViewShowTodo bool
+var astViewOutline bool
 
 func init() {
 	Command.Flag.BoolVar(&astViewStdin, "stdin", false, "input from stdin")
 	Command.Flag.BoolVar(&astViewShowEndPos, "end", false, "show decl end pos")
 	Command.Flag.BoolVar(&astViewShowTodo, "todo", false, "show todo list")
+	Command.Flag.BoolVar(&astViewOutline, "outline", false, "show outline mode")
 }
 
 func runAstView(cmd *command.Command, args []string) error {
@@ -49,9 +53,16 @@ func runAstView(cmd *command.Command, args []string) error {
 		}
 		view.PrintTree(cmd.Stdout)
 	} else {
-		err := PrintFilesTree(args, cmd.Stdout, true)
-		if err != nil {
-			return err
+		if len(args) == 1 && astViewOutline {
+			err := PrintFileOutline(args[0], cmd.Stdout, true)
+			if err != nil {
+				return err
+			}
+		} else {
+			err := PrintFilesTree(args, cmd.Stdout, true)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -401,4 +412,72 @@ func (p *PackageView) PrintPackage(w io.Writer, level int) {
 // level,tag,pos@info
 func (p *PackageView) PrintTree(w io.Writer) {
 	p.PrintPackage(w, 0)
+}
+
+// level,tag,pos@info
+func PrintFileOutline(filename string, w io.Writer, expr bool) error {
+	fset := token.NewFileSet()
+	mode := parser.AllErrors
+	if astViewShowTodo {
+		mode |= parser.ParseComments
+	}
+	f, err := parser.ParseFile(fset, filename, nil, mode)
+	if err != nil {
+		return err
+	}
+
+	posText := func(node ast.Node) string {
+		pos := fset.Position(node.Pos())
+		if astViewShowEndPos {
+			end := fset.Position(node.End())
+			return fmt.Sprintf("%d:%d:%d:%d:%d", 0, pos.Line, pos.Column, end.Line, end.Column)
+		}
+		return fmt.Sprintf("%d:%d:%d", 0, pos.Line, pos.Column)
+	}
+
+	fmt.Fprintf(w, "@%s\n", filename)
+	level := 0
+	fmt.Fprintf(w, "%v,%v,%v\n", level, tag_package, f.Name)
+	level++
+	if len(f.Imports) > 0 {
+		sort.Slice(f.Imports, func(i, j int) bool {
+			return f.Imports[i].Pos() < f.Imports[j].Pos()
+		})
+		fmt.Fprintf(w, "%v,%v,%v\n", level, tag_imports_folder, "Imports")
+		level++
+		for _, imp := range f.Imports {
+			path, _ := strconv.Unquote(imp.Path.Value)
+			fmt.Fprintf(w, "%v,%v,%v,%v\n", level, tag_import, path, posText(imp))
+		}
+		level--
+	}
+
+	sort.Slice(f.Decls, func(i, j int) bool {
+		return f.Decls[i].Pos() < f.Decls[j].Pos()
+	})
+	for _, decl := range f.Decls {
+		switch d := decl.(type) {
+		case *ast.GenDecl:
+			switch d.Tok {
+			case token.IMPORT:
+			case token.TYPE:
+			case token.CONST:
+				for _, spec := range d.Specs {
+					vs := spec.(*ast.ValueSpec)
+					for i, name := range vs.Names {
+						fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_const, name.String(), posText(name), types.ExprString(vs.Values[i]))
+					}
+				}
+			case token.VAR:
+				for _, spec := range d.Specs {
+					vs := spec.(*ast.ValueSpec)
+					for _, name := range vs.Names {
+						fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_value, name.String(), posText(name), types.ExprString(vs.Type))
+					}
+				}
+			}
+		case *ast.FuncDecl:
+		}
+	}
+	return nil
 }
