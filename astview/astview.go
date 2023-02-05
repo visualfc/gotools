@@ -33,12 +33,14 @@ var astViewStdin bool
 var astViewShowEndPos bool
 var astViewShowTodo bool
 var astViewOutline bool
+var astViewSep string
 
 func init() {
 	Command.Flag.BoolVar(&astViewStdin, "stdin", false, "input from stdin")
 	Command.Flag.BoolVar(&astViewShowEndPos, "end", false, "show decl end pos")
 	Command.Flag.BoolVar(&astViewShowTodo, "todo", false, "show todo list")
 	Command.Flag.BoolVar(&astViewOutline, "outline", false, "show outline mode")
+	Command.Flag.StringVar(&astViewSep, "sep", ",", "set output seperator")
 }
 
 func runAstView(cmd *command.Command, args []string) error {
@@ -54,7 +56,7 @@ func runAstView(cmd *command.Command, args []string) error {
 		view.PrintTree(cmd.Stdout)
 	} else {
 		if len(args) == 1 && astViewOutline {
-			err := PrintFileOutline(args[0], cmd.Stdout, true)
+			err := PrintFileOutline(args[0], cmd.Stdout, astViewSep, true)
 			if err != nil {
 				return err
 			}
@@ -415,7 +417,7 @@ func (p *PackageView) PrintTree(w io.Writer) {
 }
 
 // level,tag,pos@info
-func PrintFileOutline(filename string, w io.Writer, expr bool) error {
+func PrintFileOutline(filename string, w io.Writer, sep string, showexpr bool) error {
 	fset := token.NewFileSet()
 	mode := parser.AllErrors
 	if astViewShowTodo {
@@ -425,7 +427,6 @@ func PrintFileOutline(filename string, w io.Writer, expr bool) error {
 	if err != nil {
 		return err
 	}
-
 	posText := func(node ast.Node) string {
 		pos := fset.Position(node.Pos())
 		if astViewShowEndPos {
@@ -435,19 +436,32 @@ func PrintFileOutline(filename string, w io.Writer, expr bool) error {
 		return fmt.Sprintf("%d:%d:%d", 0, pos.Line, pos.Column)
 	}
 
+	out0 := func(level int, text ...string) {
+		fmt.Fprintf(w, "%v%s%s\n", level, sep, strings.Join(text, sep))
+	}
+	out1 := func(level int, pos ast.Node, text ...string) {
+		fmt.Fprintf(w, "%v%s%s%s%s\n", level, sep, strings.Join(text, sep), sep, posText(pos))
+	}
+	out2 := func(level int, pos ast.Node, expr ast.Expr, text ...string) {
+		fmt.Fprintf(w, "%v%s%s%s%s@%v\n", level, sep, strings.Join(text, sep), sep, posText(pos), types.ExprString(expr))
+	}
+	out2s := func(level int, pos ast.Node, expr string, text ...string) {
+		fmt.Fprintf(w, "%v%s%s%s%s@%v\n", level, sep, strings.Join(text, sep), sep, posText(pos), expr)
+	}
+
 	fmt.Fprintf(w, "@%s\n", filename)
 	level := 0
-	fmt.Fprintf(w, "%v,%v,%v,%v\n", level, tag_package, f.Name, posText(f.Name))
+	out1(level, f.Name, tag_package, f.Name.Name)
 	// level++
 	if len(f.Imports) > 0 {
 		sort.Slice(f.Imports, func(i, j int) bool {
 			return f.Imports[i].Pos() < f.Imports[j].Pos()
 		})
-		fmt.Fprintf(w, "%v,%v,%v\n", level, tag_imports_folder, "Imports")
+		out0(level, tag_imports_folder, "Imports")
 		level++
 		for _, imp := range f.Imports {
 			path, _ := strconv.Unquote(imp.Path.Value)
-			fmt.Fprintf(w, "%v,%v,%v,%v\n", level, tag_import, path, posText(imp))
+			out1(level, imp, tag_import, path)
 		}
 		level--
 	}
@@ -465,47 +479,51 @@ func PrintFileOutline(filename string, w io.Writer, expr bool) error {
 					ts := spec.(*ast.TypeSpec)
 					switch t := ts.Type.(type) {
 					case *ast.StructType:
-						fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_struct, ts.Name, posText(ts), types.ExprString(t))
+						out2(level, ts, t, tag_struct, ts.Name.Name)
 						n := len(t.Fields.List)
 						if n > 0 {
 							level++
 							for i := 0; i < n; i++ {
 								f := t.Fields.List[i]
 								for _, name := range f.Names {
-									fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_type_value, name, posText(name), types.ExprString(f.Type))
+									out2(level, name, f.Type, tag_type_value, name.String())
 								}
 							}
 							level--
 						}
 					case *ast.InterfaceType:
-						fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_interface, ts.Name, posText(ts), types.ExprString(t))
+						out2(level, ts, t, tag_interface, ts.Name.Name)
 						n := len(t.Methods.List)
 						if n > 0 {
 							level++
 							for i := 0; i < n; i++ {
 								f := t.Methods.List[i]
 								for _, name := range f.Names {
-									fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_type_method, name, posText(name), types.ExprString(f.Type))
+									out2(level, name, f.Type, tag_type_method, name.String())
 								}
 							}
 							level--
 						}
 					default:
-						fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_type, ts.Name, posText(ts.Name), types.ExprString(t))
+						out2(level, ts, t, tag_type, ts.Name.String())
 					}
 				}
 			case token.CONST:
 				for _, spec := range d.Specs {
 					vs := spec.(*ast.ValueSpec)
 					for i, name := range vs.Names {
-						fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_const, name.String(), posText(name), types.ExprString(vs.Values[i]))
+						if vs.Values == nil {
+							out1(level, name, tag_const, name.String())
+						} else {
+							out2(level, name, vs.Values[i], tag_const, name.String())
+						}
 					}
 				}
 			case token.VAR:
 				for _, spec := range d.Specs {
 					vs := spec.(*ast.ValueSpec)
 					for _, name := range vs.Names {
-						fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_value, name.String(), posText(name), types.ExprString(vs.Type))
+						out2(level, name, vs.Type, tag_value, name.String())
 					}
 				}
 			}
@@ -515,9 +533,9 @@ func PrintFileOutline(filename string, w io.Writer, expr bool) error {
 				if star {
 					name = "*" + name
 				}
-				fmt.Fprintf(w, "%v,%v,(%v).%v,%v@%v\n", level, tag_func, name, d.Name, posText(d), types.ExprString(d.Type))
+				out2(level, d, d.Type, tag_func, "("+name+")."+d.Name.String())
 			} else {
-				fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_func, d.Name, posText(d), types.ExprString(d.Type))
+				out2(level, d, d.Type, tag_func, d.Name.String())
 			}
 		}
 	}
@@ -531,11 +549,11 @@ func PrintFileOutline(filename string, w io.Writer, expr bool) error {
 			}
 		}
 		if len(todoList) > 0 {
-			fmt.Fprintf(w, "%d,%v,TodoList\n", level, tag_todo_folder)
+			out0(level, tag_todo_folder, "TodoList")
 			level++
 			for _, todo := range todoList {
 				c := todo.Comments.List[0]
-				fmt.Fprintf(w, "%d,%s,%s,%s@%s\n", level, tag_todo, todo.Tag, posText(c), todo.Text)
+				out2s(level, c, todo.Text, tag_todo, todo.Tag)
 			}
 			level--
 		}
