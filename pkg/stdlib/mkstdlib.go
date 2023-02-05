@@ -1,3 +1,4 @@
+//go:build ignore
 // +build ignore
 
 // mkstdlib generates the zstdlib.go file, containing the Go standard
@@ -60,6 +61,12 @@ func main() {
 		mustOpen(api("go1.12.txt")),
 		mustOpen(api("go1.13.txt")),
 		mustOpen(api("go1.14.txt")),
+		mustOpen(api("go1.15.txt")),
+		mustOpen(api("go1.16.txt")),
+		mustOpen(api("go1.17.txt")),
+		mustOpen(api("go1.18.txt")),
+		mustOpen(api("go1.19.txt")),
+		mustOpen(api("go1.20.txt")),
 	)
 	sc := bufio.NewScanner(f)
 	fullImport := map[string]string{} // "zip.NewReader" => "archive/zip"
