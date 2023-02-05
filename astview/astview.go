@@ -321,11 +321,12 @@ func (p *PackageView) PrintTypeFields(w io.Writer, decl *ast.GenDecl, level int)
 		}
 	case *ast.InterfaceType:
 		for _, list := range d.Methods.List {
-			if list.Names == nil {
-				continue
-			}
-			for _, m := range list.Names {
-				p.out1(w, level, m, tag_type_method, m.Name)
+			if len(list.Names) == 0 {
+				p.out2(w, level, list, list.Type, tag_type, types.ExprString(list.Type))
+			} else {
+				for _, m := range list.Names {
+					p.out2(w, level, list.Type, m, tag_type_method, m.Name)
+				}
 			}
 		}
 	}
@@ -484,30 +485,26 @@ func PrintFileOutline(filename string, w io.Writer, sep string, showexpr bool) e
 					switch t := ts.Type.(type) {
 					case *ast.StructType:
 						out2(level, ts, t, tag_struct, typeName(ts, astViewShowTypeParams))
-						n := len(t.Fields.List)
-						if n > 0 {
-							level++
-							for i := 0; i < n; i++ {
-								f := t.Fields.List[i]
-								for _, name := range f.Names {
-									out2(level, name, f.Type, tag_type_value, name.String())
-								}
+						level++
+						for _, f := range t.Fields.List {
+							for _, name := range f.Names {
+								out2(level, name, f.Type, tag_type_value, name.String())
 							}
-							level--
 						}
+						level--
 					case *ast.InterfaceType:
 						out2(level, ts, t, tag_interface, typeName(ts, astViewShowTypeParams))
-						n := len(t.Methods.List)
-						if n > 0 {
-							level++
-							for i := 0; i < n; i++ {
-								f := t.Methods.List[i]
+						level++
+						for _, f := range t.Methods.List {
+							if len(f.Names) != 0 {
 								for _, name := range f.Names {
 									out2(level, name, f.Type, tag_type_method, name.String())
 								}
+							} else {
+								out2(level, f, f.Type, tag_type, types.ExprString(f.Type))
 							}
-							level--
 						}
+						level--
 					default:
 						out2(level, ts, t, tag_type, typeName(ts, astViewShowTypeParams))
 					}
