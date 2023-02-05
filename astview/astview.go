@@ -437,8 +437,8 @@ func PrintFileOutline(filename string, w io.Writer, expr bool) error {
 
 	fmt.Fprintf(w, "@%s\n", filename)
 	level := 0
-	fmt.Fprintf(w, "%v,%v,%v\n", level, tag_package, f.Name)
-	level++
+	fmt.Fprintf(w, "%v,%v,%v,%v\n", level, tag_package, f.Name, posText(f.Name))
+	// level++
 	if len(f.Imports) > 0 {
 		sort.Slice(f.Imports, func(i, j int) bool {
 			return f.Imports[i].Pos() < f.Imports[j].Pos()
@@ -461,6 +461,39 @@ func PrintFileOutline(filename string, w io.Writer, expr bool) error {
 			switch d.Tok {
 			case token.IMPORT:
 			case token.TYPE:
+				for _, spec := range d.Specs {
+					ts := spec.(*ast.TypeSpec)
+					switch t := ts.Type.(type) {
+					case *ast.StructType:
+						fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_struct, ts.Name, posText(ts), types.ExprString(t))
+						n := len(t.Fields.List)
+						if n > 0 {
+							level++
+							for i := 0; i < n; i++ {
+								f := t.Fields.List[i]
+								for _, name := range f.Names {
+									fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_type_value, name, posText(name), types.ExprString(f.Type))
+								}
+							}
+							level--
+						}
+					case *ast.InterfaceType:
+						fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_interface, ts.Name, posText(ts), types.ExprString(t))
+						n := len(t.Methods.List)
+						if n > 0 {
+							level++
+							for i := 0; i < n; i++ {
+								f := t.Methods.List[i]
+								for _, name := range f.Names {
+									fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_type_method, name, posText(name), types.ExprString(f.Type))
+								}
+							}
+							level--
+						}
+					default:
+						fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_type, ts.Name, posText(ts.Name), types.ExprString(t))
+					}
+				}
 			case token.CONST:
 				for _, spec := range d.Specs {
 					vs := spec.(*ast.ValueSpec)
@@ -477,6 +510,34 @@ func PrintFileOutline(filename string, w io.Writer, expr bool) error {
 				}
 			}
 		case *ast.FuncDecl:
+			if d.Recv != nil {
+				name, star := recvTypeName(d.Recv.List[0].Type, true)
+				if star {
+					name = "*" + name
+				}
+				fmt.Fprintf(w, "%v,%v,(%v).%v,%v@%v\n", level, tag_func, name, d.Name, posText(d), types.ExprString(d.Type))
+			} else {
+				fmt.Fprintf(w, "%v,%v,%v,%v@%v\n", level, tag_func, d.Name, posText(d), types.ExprString(d.Type))
+			}
+		}
+	}
+
+	if astViewShowTodo {
+		var todoList []*TodoDoc
+		for _, c := range f.Comments {
+			text := c.List[0].Text
+			if m := todo_markers.FindStringSubmatchIndex(text); m != nil {
+				todoList = append(todoList, &TodoDoc{text[m[2]:m[3]], text[m[2]:], c})
+			}
+		}
+		if len(todoList) > 0 {
+			fmt.Fprintf(w, "%d,%v,TodoList\n", level, tag_todo_folder)
+			level++
+			for _, todo := range todoList {
+				c := todo.Comments.List[0]
+				fmt.Fprintf(w, "%d,%s,%s,%s@%s\n", level, tag_todo, todo.Tag, posText(c), todo.Text)
+			}
+			level--
 		}
 	}
 	return nil
