@@ -246,9 +246,9 @@ func (p *PackageView) out2s(w io.Writer, level int, pos ast.Node, expr string, t
 func (p *PackageView) printFuncsHelper(w io.Writer, funcs []*FuncDoc, level int, tag string, tag_folder string) {
 	for _, f := range funcs {
 		if p.expr {
-			p.out2(w, level, f.Decl, f.Decl.Type, tag, f.Name)
+			p.out2(w, level, f.Decl, f.Decl.Type, tag, funcName(f.Decl, astViewShowTypeParams))
 		} else {
-			p.out1(w, level, f.Decl, tag, f.Name)
+			p.out1(w, level, f.Decl, tag, funcName(f.Decl, astViewShowTypeParams))
 		}
 	}
 }
@@ -537,17 +537,19 @@ func PrintFileOutline(filename string, w io.Writer, sep string, showexpr bool) e
 			}
 		case *ast.FuncDecl:
 			if d.Recv != nil {
-				name, star := recvTypeName(d.Recv.List[0].Type, true)
-				if star {
-					name = "*" + name
-				}
+				var name string
 				if astViewShowTypeParams {
-					out2(level, d, d.Type, tag_func, types.ExprString(d.Recv.List[0].Type))
+					name = types.ExprString(d.Recv.List[0].Type)
 				} else {
-					out2(level, d, d.Type, tag_func, "("+name+")."+d.Name.String())
+					var star bool
+					name, star = recvTypeName(d.Recv.List[0].Type, true)
+					if star {
+						name = "*" + name
+					}
 				}
+				out2(level, d, d.Type, tag_func, "("+name+")."+d.Name.String())
 			} else {
-				out2(level, d, d.Type, tag_func, d.Name.String())
+				out2(level, d, d.Type, tag_func, funcName(d, astViewShowTypeParams))
 			}
 		}
 	}

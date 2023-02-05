@@ -32,17 +32,34 @@ func recvTypeName(typ ast.Expr, showAll bool) (string, bool) {
 	return "", false
 }
 
-func typeName(ts *ast.TypeSpec, showTypeParams bool) string {
-	if showTypeParams && ts.TypeParams != nil {
+func typeName(d *ast.TypeSpec, showTypeParams bool) string {
+	if showTypeParams && d.TypeParams != nil {
+		tparams := d.TypeParams
 		var fs []string
-		n := len(ts.TypeParams.List)
+		n := len(tparams.List)
 		for i := 0; i < n; i++ {
-			f := ts.TypeParams.List[i]
+			f := tparams.List[i]
 			for _, name := range f.Names {
 				fs = append(fs, name.String()+" "+types.ExprString(f.Type))
 			}
 		}
-		return ts.Name.String() + "[" + strings.Join(fs, ",") + "]"
+		return d.Name.String() + "[" + strings.Join(fs, ", ") + "]"
 	}
-	return ts.Name.String()
+	return d.Name.String()
+}
+
+func funcName(d *ast.FuncDecl, showTypeParams bool) string {
+	if showTypeParams && d.Type.TypeParams != nil {
+		tparams := d.Type.TypeParams
+		var fs []string
+		n := len(tparams.List)
+		for i := 0; i < n; i++ {
+			f := tparams.List[i]
+			for _, name := range f.Names {
+				fs = append(fs, name.String()+" "+types.ExprString(f.Type))
+			}
+		}
+		return d.Name.String() + "[" + strings.Join(fs, ", ") + "]"
+	}
+	return d.Name.String()
 }
