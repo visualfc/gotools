@@ -117,11 +117,12 @@ func (p *PackageView) posFileIndex(pos token.Position) int {
 
 func (p *PackageView) posText(node ast.Node) string {
 	pos := p.fset.Position(node.Pos())
+	index := p.posFileIndex(pos)
 	if astViewShowEndPos {
 		end := p.fset.Position(node.End())
-		return fmt.Sprintf("%d:%d:%d:%d:%d", 0, pos.Line, pos.Column, end.Line, end.Column)
+		return fmt.Sprintf("%d:%d:%d:%d:%d", index, pos.Line, pos.Column, end.Line, end.Column)
 	}
-	return fmt.Sprintf("%d:%d:%d", 0, pos.Line, pos.Column)
+	return fmt.Sprintf("%d:%d:%d", index, pos.Line, pos.Column)
 }
 
 func NewFilePackage(filename string) (*PackageView, error) {
@@ -225,12 +226,25 @@ func NewFilePackageSource(filename string, f io.Reader, expr bool) (*PackageView
 	return p, nil
 }
 
+func (p *PackageView) out0(w io.Writer, level int, text ...string) {
+	fmt.Fprintf(w, "%v%s%s\n", level, astViewSep, strings.Join(text, astViewSep))
+}
+func (p *PackageView) out1(w io.Writer, level int, pos ast.Node, text ...string) {
+	fmt.Fprintf(w, "%v%s%s%s%s\n", level, astViewSep, strings.Join(text, astViewSep), astViewSep, p.posText(pos))
+}
+func (p *PackageView) out2(w io.Writer, level int, pos ast.Node, expr ast.Expr, text ...string) {
+	fmt.Fprintf(w, "%v%s%s%s%s@%v\n", level, astViewSep, strings.Join(text, astViewSep), astViewSep, p.posText(pos), types.ExprString(expr))
+}
+func (p *PackageView) out2s(w io.Writer, level int, pos ast.Node, expr string, text ...string) {
+	fmt.Fprintf(w, "%v%s%s%s%s@%v\n", level, astViewSep, strings.Join(text, astViewSep), astViewSep, p.posText(pos), expr)
+}
+
 func (p *PackageView) printFuncsHelper(w io.Writer, funcs []*FuncDoc, level int, tag string, tag_folder string) {
 	for _, f := range funcs {
 		if p.expr {
-			fmt.Fprintf(w, "%d,%s,%s,%s@%s\n", level, tag, f.Name, p.posText(f.Decl), types.ExprString(f.Decl.Type))
+			p.out2(w, level, f.Decl, f.Decl.Type, tag, f.Name)
 		} else {
-			fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag, f.Name, p.posText(f.Decl))
+			p.out1(w, level, f.Decl, tag, f.Name)
 		}
 	}
 }
@@ -238,9 +252,9 @@ func (p *PackageView) printFuncsHelper(w io.Writer, funcs []*FuncDoc, level int,
 func (p *PackageView) PrintVars(w io.Writer, vars []*ValueDoc, level int, tag string, tag_folder string) {
 	if len(tag_folder) > 0 && len(vars) > 0 {
 		if tag_folder == tag_value_folder {
-			fmt.Fprintf(w, "%d,%s,Variables\n", level, tag_folder)
+			p.out0(w, level, tag_folder, "Variables")
 		} else if tag_folder == tag_const_folder {
-			fmt.Fprintf(w, "%d,%s,Constants\n", level, tag_folder)
+			p.out0(w, level, tag_folder, "Constants")
 		}
 		level++
 	}
@@ -252,9 +266,9 @@ func (p *PackageView) PrintVars(w io.Writer, vars []*ValueDoc, level int, tag st
 			if m, ok := s.(*ast.ValueSpec); ok {
 				for i := 0; i < len(m.Names); i++ {
 					if p.expr && m.Type != nil {
-						fmt.Fprintf(w, "%d,%s,%s,%s@%s\n", level, tag, m.Names[i], p.posText(m), types.ExprString(m.Type))
+						p.out2(w, level, m, m.Type, tag, m.Names[i].String())
 					} else {
-						fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag, m.Names[i], p.posText(m))
+						p.out1(w, level, m, tag, m.Names[i].String())
 					}
 				}
 			}
@@ -273,7 +287,7 @@ func (p *PackageView) PrintTypes(w io.Writer, types []*TypeDoc, level int) {
 		} else if _, ok := typespec.Type.(*ast.StructType); ok {
 			tag = tag_struct
 		}
-		fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag, d.Type.Name, p.posText(d.Decl))
+		p.out1(w, level, d.Decl, tag, d.Type.Name.String())
 		p.printFuncsHelper(w, d.Funcs, level+1, tag_type_factor, "")
 		p.printFuncsHelper(w, d.Methods, level+1, tag_type_method, "")
 		p.PrintTypeFields(w, d.Decl, level+1)
@@ -295,9 +309,9 @@ func (p *PackageView) PrintTypeFields(w io.Writer, decl *ast.GenDecl, level int)
 			}
 			for _, m := range list.Names {
 				if list.Type != nil {
-					fmt.Fprintf(w, "%d,%s,%s,%s@%s\n", level, tag_type_value, m.Name, p.posText(m), types.ExprString(list.Type))
+					p.out2(w, level, m, list.Type, tag_type_value, m.Name)
 				} else {
-					fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag_type_value, m.Name, p.posText(m))
+					p.out1(w, level, m, tag_type_value, m.Name)
 				}
 			}
 		}
@@ -307,19 +321,19 @@ func (p *PackageView) PrintTypeFields(w io.Writer, decl *ast.GenDecl, level int)
 				continue
 			}
 			for _, m := range list.Names {
-				fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag_type_method, m.Name, p.posText(m))
+				p.out1(w, level, m, tag_type_method, m.Name)
 			}
 		}
 	}
 }
 
 func (p *PackageView) PrintHeader(w io.Writer, level int) {
-	fmt.Fprintf(w, "%d,%s,%s\n", level, tag_package, p.pdoc.PackageName)
+	p.out0(w, level, tag_package, p.pdoc.PackageName)
 }
 
 func (p *PackageView) PrintImports(w io.Writer, level int, tag, tag_folder string) {
 	if tag_folder != "" && len(p.pdoc.Imports) > 0 {
-		fmt.Fprintf(w, "%d,%s,%s\n", level, tag_folder, "Imports")
+		p.out0(w, level, tag_folder, "Imports")
 		level++
 	}
 	var parentPkg *pkgutil.Package
@@ -348,7 +362,7 @@ func (p *PackageView) PrintImports(w io.Writer, level int, tag, tag_folder strin
 		if parentPkg != nil {
 			name, _ = pkgutil.VendoredImportPath(parentPkg, name)
 		}
-		fmt.Fprintf(w, "%d,%s,%s,%s\n", level, tag, name, strings.Join(ps, ";"))
+		p.out0(w, level, tag, name, strings.Join(ps, ";"))
 	}
 }
 
@@ -361,7 +375,7 @@ func (p *PackageView) PrintFuncs(w io.Writer, level int, tag_folder string) {
 		return
 	}
 	if len(tag_folder) > 0 {
-		fmt.Fprintf(w, "%d,%s,Functions\n", level, tag_folder)
+		p.out0(w, level, tag_folder, "Functions")
 		level++
 	}
 	p.printFuncsHelper(w, p.pdoc.Factorys, level, tag_type_factor, tag_func_folder)
@@ -377,12 +391,12 @@ func (p *PackageView) PrintTodos(w io.Writer, level int, tag, tag_folder string)
 		return
 	}
 	if len(tag_folder) > 0 {
-		fmt.Fprintf(w, "%d,%s,TodoList\n", level, tag_folder)
+		p.out0(w, level, tag_folder, "TodoList")
 		level++
 	}
 	for _, todo := range p.pdoc.Todos {
 		c := todo.Comments.List[0]
-		fmt.Fprintf(w, "%d,%s,%s,%s@%s\n", level, tag, todo.Tag, p.posText(c), todo.Text)
+		p.out2s(w, level, c, todo.Text, tag, todo.Tag)
 	}
 }
 
@@ -509,7 +523,11 @@ func PrintFileOutline(filename string, w io.Writer, sep string, showexpr bool) e
 				for _, spec := range d.Specs {
 					vs := spec.(*ast.ValueSpec)
 					for _, name := range vs.Names {
-						out2(level, name, vs.Type, tag_value, name.String())
+						if vs.Type == nil {
+							out1(level, name, tag_value, name.String())
+						} else {
+							out2(level, name, vs.Type, tag_value, name.String())
+						}
 					}
 				}
 			}
