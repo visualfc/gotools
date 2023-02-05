@@ -6,7 +6,7 @@ package astview
 import "go/ast"
 
 func docBaseTypeName(typ ast.Expr, showAll bool) string {
-	name, _ := recvTypeName(typ)
+	name, _ := recvTypeName(typ, showAll)
 	return name
 }
 
