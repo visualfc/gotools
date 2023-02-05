@@ -5,6 +5,8 @@ package astview
 
 import (
 	"go/ast"
+	"go/types"
+	"strings"
 )
 
 func docBaseTypeName(typ ast.Expr, showAll bool) string {
@@ -28,4 +30,19 @@ func recvTypeName(typ ast.Expr, showAll bool) (string, bool) {
 		return docBaseTypeName(t.X, showAll), false
 	}
 	return "", false
+}
+
+func typeName(ts *ast.TypeSpec, showTypeParams bool) string {
+	if showTypeParams && ts.TypeParams != nil {
+		var fs []string
+		n := len(ts.TypeParams.List)
+		for i := 0; i < n; i++ {
+			f := ts.TypeParams.List[i]
+			for _, name := range f.Names {
+				fs = append(fs, name.String()+" "+types.ExprString(f.Type))
+			}
+		}
+		return ts.Name.String() + "[" + strings.Join(fs, ",") + "]"
+	}
+	return ts.Name.String()
 }

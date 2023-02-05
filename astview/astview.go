@@ -29,17 +29,21 @@ var Command = &command.Command{
 	Long:      `print go files astview`,
 }
 
-var astViewStdin bool
-var astViewShowEndPos bool
-var astViewShowTodo bool
-var astViewOutline bool
-var astViewSep string
+var (
+	astViewStdin          bool
+	astViewShowEndPos     bool
+	astViewShowTodo       bool
+	astViewOutline        bool
+	astViewShowTypeParams bool
+	astViewSep            string
+)
 
 func init() {
 	Command.Flag.BoolVar(&astViewStdin, "stdin", false, "input from stdin")
 	Command.Flag.BoolVar(&astViewShowEndPos, "end", false, "show decl end pos")
 	Command.Flag.BoolVar(&astViewShowTodo, "todo", false, "show todo list")
-	Command.Flag.BoolVar(&astViewOutline, "outline", false, "show outline mode")
+	Command.Flag.BoolVar(&astViewShowTypeParams, "tp", false, "show typeparams")
+	Command.Flag.BoolVar(&astViewOutline, "outline", false, "set outline mode")
 	Command.Flag.StringVar(&astViewSep, "sep", ",", "set output seperator")
 }
 
@@ -287,7 +291,7 @@ func (p *PackageView) PrintTypes(w io.Writer, types []*TypeDoc, level int) {
 		} else if _, ok := typespec.Type.(*ast.StructType); ok {
 			tag = tag_struct
 		}
-		p.out1(w, level, d.Decl, tag, d.Type.Name.String())
+		p.out1(w, level, d.Decl, tag, typeName(typespec, astViewShowTypeParams))
 		p.printFuncsHelper(w, d.Funcs, level+1, tag_type_factor, "")
 		p.printFuncsHelper(w, d.Methods, level+1, tag_type_method, "")
 		p.PrintTypeFields(w, d.Decl, level+1)
@@ -479,7 +483,7 @@ func PrintFileOutline(filename string, w io.Writer, sep string, showexpr bool) e
 					ts := spec.(*ast.TypeSpec)
 					switch t := ts.Type.(type) {
 					case *ast.StructType:
-						out2(level, ts, t, tag_struct, ts.Name.Name)
+						out2(level, ts, t, tag_struct, typeName(ts, astViewShowTypeParams))
 						n := len(t.Fields.List)
 						if n > 0 {
 							level++
@@ -492,7 +496,7 @@ func PrintFileOutline(filename string, w io.Writer, sep string, showexpr bool) e
 							level--
 						}
 					case *ast.InterfaceType:
-						out2(level, ts, t, tag_interface, ts.Name.Name)
+						out2(level, ts, t, tag_interface, typeName(ts, astViewShowTypeParams))
 						n := len(t.Methods.List)
 						if n > 0 {
 							level++
@@ -505,7 +509,7 @@ func PrintFileOutline(filename string, w io.Writer, sep string, showexpr bool) e
 							level--
 						}
 					default:
-						out2(level, ts, t, tag_type, ts.Name.String())
+						out2(level, ts, t, tag_type, typeName(ts, astViewShowTypeParams))
 					}
 				}
 			case token.CONST:
@@ -537,7 +541,11 @@ func PrintFileOutline(filename string, w io.Writer, sep string, showexpr bool) e
 				if star {
 					name = "*" + name
 				}
-				out2(level, d, d.Type, tag_func, "("+name+")."+d.Name.String())
+				if astViewShowTypeParams {
+					out2(level, d, d.Type, tag_func, types.ExprString(d.Recv.List[0].Type))
+				} else {
+					out2(level, d, d.Type, tag_func, "("+name+")."+d.Name.String())
+				}
 			} else {
 				out2(level, d, d.Type, tag_func, d.Name.String())
 			}

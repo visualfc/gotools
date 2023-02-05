@@ -23,3 +23,7 @@ func recvTypeName(typ ast.Expr, showAll bool) (string, bool) {
 	}
 	return "", false
 }
+
+func typeName(ts *ast.TypeSpec, showTypeParams bool) string {
+	return ts.Name.String()
+}
