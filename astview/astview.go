@@ -307,15 +307,16 @@ func (p *PackageView) PrintTypeFields(w io.Writer, decl *ast.GenDecl, level int)
 	}
 	switch d := spec.Type.(type) {
 	case *ast.StructType:
-		for _, list := range d.Fields.List {
-			if list.Names == nil {
-				continue
-			}
-			for _, m := range list.Names {
-				if list.Type != nil {
-					p.out2(w, level, m, list.Type, tag_type_value, m.Name)
-				} else {
-					p.out1(w, level, m, tag_type_value, m.Name)
+		for _, field := range d.Fields.List {
+			if field.Names == nil {
+				p.out2(w, level, field, field.Type, tag_type, types.ExprString(field.Type))
+			} else {
+				for _, m := range field.Names {
+					if field.Type != nil {
+						p.out2(w, level, field, field.Type, tag_type_value, m.Name)
+					} else {
+						p.out1(w, level, field, tag_type_value, m.Name)
+					}
 				}
 			}
 		}
@@ -488,7 +489,7 @@ func PrintFileOutline(filename string, w io.Writer, sep string, showexpr bool) e
 						level++
 						for _, f := range t.Fields.List {
 							for _, name := range f.Names {
-								out2(level, name, f.Type, tag_type_value, name.String())
+								out2(level, f, f.Type, tag_type_value, name.String())
 							}
 						}
 						level--
@@ -498,7 +499,7 @@ func PrintFileOutline(filename string, w io.Writer, sep string, showexpr bool) e
 						for _, f := range t.Methods.List {
 							if len(f.Names) != 0 {
 								for _, name := range f.Names {
-									out2(level, name, f.Type, tag_type_method, name.String())
+									out2(level, f, f.Type, tag_type_method, name.String())
 								}
 							} else {
 								out2(level, f, f.Type, tag_type, types.ExprString(f.Type))
@@ -514,9 +515,9 @@ func PrintFileOutline(filename string, w io.Writer, sep string, showexpr bool) e
 					vs := spec.(*ast.ValueSpec)
 					for i, name := range vs.Names {
 						if vs.Values == nil {
-							out1(level, name, tag_const, name.String())
+							out1(level, vs, tag_const, name.String())
 						} else {
-							out2(level, name, vs.Values[i], tag_const, name.String())
+							out2(level, vs, vs.Values[i], tag_const, name.String())
 						}
 					}
 				}
@@ -525,9 +526,9 @@ func PrintFileOutline(filename string, w io.Writer, sep string, showexpr bool) e
 					vs := spec.(*ast.ValueSpec)
 					for _, name := range vs.Names {
 						if vs.Type == nil {
-							out1(level, name, tag_value, name.String())
+							out1(level, vs, tag_value, name.String())
 						} else {
-							out2(level, name, vs.Type, tag_value, name.String())
+							out2(level, vs, vs.Type, tag_value, name.String())
 						}
 					}
 				}
