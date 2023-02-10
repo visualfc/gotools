@@ -6,9 +6,13 @@ package gotest
 
 import (
 	"fmt"
+	"go/ast"
 	"go/build"
+	"go/parser"
+	"go/token"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/visualfc/gotools/pkg/command"
@@ -55,33 +59,32 @@ func runGotest(cmd *command.Command, args []string) error {
 		fmt.Println("The test filename must xxx_test.go")
 		return os.ErrInvalid
 	}
-
-	pkg, err := build.ImportDir(".", 0)
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, testFileName, nil, parser.ParseComments)
 	if err != nil {
-		fmt.Println("import dir error", err)
 		return err
 	}
-
-	var testFiles []string
-
-	for _, file := range pkg.XTestGoFiles {
-		if file == testFileName {
-			testFiles = append(testFiles, file)
-			break
+	var fnList []string
+	for _, decl := range f.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok {
+			name := fn.Name.Name
+			if strings.HasPrefix(name, "Test") || strings.HasPrefix(name, "Benchmark") {
+				fnList = append(fnList, name)
+			}
 		}
 	}
-	for _, file := range pkg.TestGoFiles {
-		if file == testFileName {
-			testFiles = append(testFiles, pkg.GoFiles...)
-			testFiles = append(testFiles, file)
-			break
-		}
+	if len(fnList) == 0 {
+		return fmt.Errorf("testing: warning: no tests to run")
+	}
+
+	if filepath.IsAbs(testFileName) {
+		dir, _ := filepath.Split(testFileName)
+		os.Chdir(dir)
 	}
 
 	gobin, err := exec.LookPath("go")
 	if err != nil {
-		fmt.Println("error look go", err)
-		return err
+		return fmt.Errorf("error lookup go: %v", err)
 	}
 
 	var testArgs []string
@@ -89,10 +92,9 @@ func runGotest(cmd *command.Command, args []string) error {
 	if len(args) > 0 {
 		testArgs = append(testArgs, args...)
 	}
-	testArgs = append(testArgs, testFiles...)
+	testArgs = append(testArgs, "-run", fmt.Sprintf("^(%v)$", strings.Join(fnList, "|")))
 
 	command := exec.Command(gobin, testArgs...)
-	command.Dir = pkg.Dir
 	command.Stdin = os.Stdin
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr

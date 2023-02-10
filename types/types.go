@@ -19,7 +19,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -144,30 +143,12 @@ func builtinInfo(id string) string {
 	return "builtin " + id
 }
 
-func simpleObjInfo(obj types.Object) string {
-	s := obj.String()
-	pkg := obj.Pkg()
-	if pkg != nil {
-		s = strings.Replace(s, pkg.Path(), pkg.Name(), -1)
-		s = simpleType(s)
-		if pkg.Name() == "main" {
-			s = strings.Replace(s, "main.", "", -1)
+func (w *PkgWalker) simpleObjInfo(obj types.Object) string {
+	return types.ObjectString(obj, func(pkg *types.Package) string {
+		if pkg == w.lookup {
+			return ""
 		}
-	}
-	return s
-}
-
-func simpleType(src string) string {
-	re, _ := regexp.Compile("[\\w\\./]+")
-	return re.ReplaceAllStringFunc(src, func(s string) string {
-		r := s
-		if i := strings.LastIndex(s, "/"); i != -1 {
-			r = s[i+1:]
-		}
-		if strings.Count(r, ".") > 1 {
-			r = r[strings.Index(r, ".")+1:]
-		}
-		return r
+		return pkg.Name()
 	})
 }
 
@@ -316,6 +297,7 @@ type PkgWalker struct {
 	FileSet            *token.FileSet
 	Context            *build.Context
 	current            *types.Package
+	lookup             *types.Package
 	importingName      map[string]bool
 	ParsedFileCache    map[string]*ast.File
 	ParsedFileModTime  map[string]int64
@@ -712,6 +694,7 @@ func (w *PkgWalker) parseFileEx(dir, file string, src interface{}, mtime int64, 
 }
 
 func (w *PkgWalker) LookupCursor(pkg *types.Package, conf *PkgConfig, cursor *FileCursor) error {
+	w.lookup = pkg
 	f, _ := w.parseFile(cursor.fileDir, cursor.fileName)
 	if f != nil {
 		cursor.pos = token.Pos(w.FileSet.File(f.Pos()).Base()) + token.Pos(cursor.cursorPos)
@@ -1776,12 +1759,12 @@ func (w *PkgWalker) printInfo(cursorObj types.Object, kind ObjKind, packageName,
 	} else if findInfo.isInterfaceMethod {
 		if findInfo.pkg == nil {
 			// error.Error()
-			w.cmd.Println(simpleObjInfo(findInfo.obj))
+			w.cmd.Println(w.simpleObjInfo(findInfo.obj))
 		} else {
-			w.cmd.Println(strings.Replace(simpleObjInfo(findInfo.obj), "(interface)", findInfo.pkg.Name()+"."+findInfo.interfaceTypeName, 1))
+			w.cmd.Println(strings.Replace(w.simpleObjInfo(findInfo.obj), "(interface)", findInfo.pkg.Name()+"."+findInfo.interfaceTypeName, 1))
 		}
 	} else {
-		w.cmd.Println(simpleObjInfo(cursorObj))
+		w.cmd.Println(w.simpleObjInfo(cursorObj))
 	}
 }
 
