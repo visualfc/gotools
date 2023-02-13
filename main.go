@@ -16,7 +16,6 @@ import (
 	"github.com/visualfc/gotools/gopresent"
 	"github.com/visualfc/gotools/gotest"
 	"github.com/visualfc/gotools/jsonfmt"
-	"github.com/visualfc/gotools/oracle"
 	"github.com/visualfc/gotools/pkg/command"
 	"github.com/visualfc/gotools/pkgcheck"
 	"github.com/visualfc/gotools/pkgs"
@@ -35,7 +34,6 @@ func init() {
 	command.Register(gopresent.Command)
 	command.Register(goapi.Command)
 	command.Register(pkgs.Command)
-	command.Register(oracle.Command)
 	command.Register(gofmt.Command)
 	command.Register(gotest.Command)
 	command.Register(finddecl.Command)
