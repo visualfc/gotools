@@ -1620,23 +1620,13 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 			if kind == ObjPkgName && bp.ImportPath == findPkgPath {
 				uses_paths = append(uses_paths, bp.ImportPath)
 			} else {
-				find := false
-				imports := append(append([]string{}, bp.Imports...), bp.XTestImports...)
-				for _, v := range imports {
-					if v == findPkgPath {
-						find = true
-						break
+				importPath := path
+				for _, v := range uses_paths {
+					if v == importPath {
+						return nil
 					}
 				}
-				if find {
-					importPath := path //filepath.Join(w.mod.Path(), path[len(dir)+1:])
-					for _, v := range uses_paths {
-						if v == importPath {
-							return nil
-						}
-					}
-					uses_paths = append(uses_paths, importPath)
-				}
+				uses_paths = append(uses_paths, importPath)
 			}
 			return nil
 		})
