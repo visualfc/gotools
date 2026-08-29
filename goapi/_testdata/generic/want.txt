@@ -1,0 +1,4 @@
+pkg fixture, func Identity(T) T
+pkg fixture, method (Box[T]) Get() T
+pkg fixture, type Box struct
+pkg fixture, type Box struct, Value T

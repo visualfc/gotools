@@ -1,0 +1,11 @@
+package fixture
+
+import (
+	"fmt"
+
+	"github.com/visualfc/gotools/pkg/gomod"
+)
+
+func Use() {
+	fmt.Println(gomod.Module{})
+}

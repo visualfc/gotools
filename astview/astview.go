@@ -38,6 +38,53 @@ var (
 	astViewSep            string
 )
 
+func docBaseTypeName(typ ast.Expr, showAll bool) string {
+	name, _ := recvTypeName(typ, showAll)
+	return name
+}
+
+func recvTypeName(typ ast.Expr, showAll bool) (string, bool) {
+	switch t := typ.(type) {
+	case *ast.Ident:
+		if showAll || t.IsExported() {
+			return t.Name, false
+		}
+	case *ast.StarExpr:
+		return docBaseTypeName(t.X, showAll), true
+	case *ast.IndexExpr:
+		return docBaseTypeName(t.X, showAll), false
+	case *ast.IndexListExpr:
+		return docBaseTypeName(t.X, showAll), false
+	}
+	return "", false
+}
+
+func typeName(d *ast.TypeSpec, showTypeParams bool) string {
+	if showTypeParams && d.TypeParams != nil {
+		var params []string
+		for _, field := range d.TypeParams.List {
+			for _, name := range field.Names {
+				params = append(params, name.String()+" "+types.ExprString(field.Type))
+			}
+		}
+		return d.Name.String() + "[" + strings.Join(params, ", ") + "]"
+	}
+	return d.Name.String()
+}
+
+func funcName(d *ast.FuncDecl, showTypeParams bool) string {
+	if showTypeParams && d.Type.TypeParams != nil {
+		var params []string
+		for _, field := range d.Type.TypeParams.List {
+			for _, name := range field.Names {
+				params = append(params, name.String()+" "+types.ExprString(field.Type))
+			}
+		}
+		return d.Name.String() + "[" + strings.Join(params, ", ") + "]"
+	}
+	return d.Name.String()
+}
+
 func init() {
 	Command.Flag.BoolVar(&astViewStdin, "stdin", false, "input from stdin")
 	Command.Flag.BoolVar(&astViewShowEndPos, "end", false, "show decl end pos")
@@ -138,10 +185,10 @@ func NewFilePackage(filename string) (*PackageView, error) {
 	}
 	m := make(map[string]*ast.File)
 	m[filename] = file
-	pkg, err := ast.NewPackage(p.fset, m, nil, nil)
-	if err != nil {
-		return nil, err
-	}
+	// ast.NewPackage reports predeclared identifiers such as `any` as
+	// undeclared when no universe scope is supplied. The documentation view
+	// only needs the parsed files, so avoid the deprecated resolver here.
+	pkg := &ast.Package{Name: file.Name.Name, Files: m}
 	p.pkg = pkg
 	p.pdoc = NewPackageDoc(pkg, pkg.Name, true)
 	return p, nil
@@ -221,10 +268,10 @@ func NewFilePackageSource(filename string, f io.Reader, expr bool) (*PackageView
 	}
 	m := make(map[string]*ast.File)
 	m[filename] = file
-	pkg, err := ast.NewPackage(p.fset, m, nil, nil)
-	if err != nil {
-		return nil, err
-	}
+	// ast.NewPackage reports predeclared identifiers such as `any` as
+	// undeclared when no universe scope is supplied. The documentation view
+	// only needs the parsed files, so avoid the deprecated resolver here.
+	pkg := &ast.Package{Name: file.Name.Name, Files: m}
 
 	p.pdoc = NewPackageDoc(pkg, pkg.Name, true)
 	return p, nil
