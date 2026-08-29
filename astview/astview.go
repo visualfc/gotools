@@ -38,6 +38,53 @@ var (
 	astViewSep            string
 )
 
+func docBaseTypeName(typ ast.Expr, showAll bool) string {
+	name, _ := recvTypeName(typ, showAll)
+	return name
+}
+
+func recvTypeName(typ ast.Expr, showAll bool) (string, bool) {
+	switch t := typ.(type) {
+	case *ast.Ident:
+		if showAll || t.IsExported() {
+			return t.Name, false
+		}
+	case *ast.StarExpr:
+		return docBaseTypeName(t.X, showAll), true
+	case *ast.IndexExpr:
+		return docBaseTypeName(t.X, showAll), false
+	case *ast.IndexListExpr:
+		return docBaseTypeName(t.X, showAll), false
+	}
+	return "", false
+}
+
+func typeName(d *ast.TypeSpec, showTypeParams bool) string {
+	if showTypeParams && d.TypeParams != nil {
+		var params []string
+		for _, field := range d.TypeParams.List {
+			for _, name := range field.Names {
+				params = append(params, name.String()+" "+types.ExprString(field.Type))
+			}
+		}
+		return d.Name.String() + "[" + strings.Join(params, ", ") + "]"
+	}
+	return d.Name.String()
+}
+
+func funcName(d *ast.FuncDecl, showTypeParams bool) string {
+	if showTypeParams && d.Type.TypeParams != nil {
+		var params []string
+		for _, field := range d.Type.TypeParams.List {
+			for _, name := range field.Names {
+				params = append(params, name.String()+" "+types.ExprString(field.Type))
+			}
+		}
+		return d.Name.String() + "[" + strings.Join(params, ", ") + "]"
+	}
+	return d.Name.String()
+}
+
 func init() {
 	Command.Flag.BoolVar(&astViewStdin, "stdin", false, "input from stdin")
 	Command.Flag.BoolVar(&astViewShowEndPos, "end", false, "show decl end pos")
