@@ -33,6 +33,7 @@ func testFixImportsCase(t *testing.T, name string) {
 	if err := processFile("_testdata/"+name+"/input.go", bytes.NewReader(src), &out, false); err != nil {
 		t.Fatal(err)
 	}
+	want = bytes.ReplaceAll(want, []byte("\r\n"), []byte("\n"))
 	if !bytes.Equal(out.Bytes(), want) {
 		t.Fatalf("fiximports output mismatch\n got:\n%s\nwant:\n%s", out.Bytes(), want)
 	}
