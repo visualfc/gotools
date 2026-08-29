@@ -433,7 +433,7 @@ type pkgSymbol struct {
 	symbol string // "RoundTripper"
 }
 
-//expression kind
+// expression kind
 type Kind int
 
 const (
@@ -499,7 +499,7 @@ func (k Kind) String() string {
 	return fmt.Sprint("unknown-kind")
 }
 
-//expression type
+// expression type
 type TypeInfo struct {
 	Kind Kind
 	Name string
@@ -2163,6 +2163,13 @@ func (w *Walker) lookupExpr(vi ast.Expr, p token.Pos) (string, *TypeInfo, error)
 			return w.lookupExpr(v.Index, p)
 		}
 		return w.lookupExpr(v.X, p)
+	case *ast.IndexListExpr:
+		for _, index := range v.Indices {
+			if inRange(index, p) {
+				return w.lookupExpr(index, p)
+			}
+		}
+		return w.lookupExpr(v.X, p)
 	case *ast.ParenExpr:
 		return w.lookupExpr(v.X, p)
 	case *ast.FuncLit:
@@ -2962,6 +2969,11 @@ func (w *Walker) varValueType(vi ast.Expr, index int) (string, error) {
 					return w.varSelectorType(typ[2:], v.Sel.Name)
 				}
 			}
+		case *ast.IndexListExpr:
+			typ, err := w.varValueType(st.X, index)
+			if err == nil && strings.HasPrefix(typ, "[]") {
+				return w.varSelectorType(typ[2:], v.Sel.Name)
+			}
 		case *ast.CompositeLit:
 			typ, err := w.varValueType(st.Type, 0)
 			if err == nil {
@@ -3113,6 +3125,11 @@ func (w *Walker) varValueType(vi ast.Expr, index int) (string, error) {
 						return w.varFunctionType(typ[2:], ft.Sel.Name, index)
 					}
 				}
+			case *ast.IndexListExpr:
+				typ, err := w.varValueType(st.X, index)
+				if err == nil && strings.HasPrefix(typ, "[]") {
+					return w.varFunctionType(typ[2:], ft.Sel.Name, index)
+				}
 			case *ast.TypeAssertExpr:
 				typ := w.nodeString(w.namelessType(st.Type))
 				typ = strings.TrimLeft(typ, "*")
@@ -3168,6 +3185,12 @@ func (w *Walker) varValueType(vi ast.Expr, index int) (string, error) {
 			}
 		}
 		return "", fmt.Errorf("unknown index %v %v %v %v", typ, v.X, index, err)
+	case *ast.IndexListExpr:
+		typ, err := w.varValueType(v.X, index)
+		if err == nil {
+			return typ, nil
+		}
+		return "", fmt.Errorf("unknown index list %v %v", v.X, err)
 	case *ast.SliceExpr:
 		return w.varValueType(v.X, index)
 	case *ast.ChanType:
@@ -3502,7 +3525,10 @@ func (w *Walker) interfaceMethods(pkg, iname string) (methods []typeMethod, comp
 			methods = append(methods, m...)
 			complete = complete && c
 		default:
-			log.Fatalf("unknown type %T in interface field", typ)
+			// Go 1.18 added type-set expressions to interfaces. They are
+			// represented as *ast.BinaryExpr (for example, ~int | ~string)
+			// and do not contribute methods to the exported API.
+			continue
 		}
 	}
 	return
@@ -3539,22 +3565,6 @@ func (w *Walker) walkInterfaceType(name string, t *ast.InterfaceType) {
 	} else {
 		w.emitFeature(fmt.Sprintf("type %s interface { %s }", name, strings.Join(methNames, ", ")), t.Pos()-token.Pos(len(name)+1))
 	}
-}
-
-func baseTypeName(x ast.Expr) (name string, imported bool) {
-	switch t := x.(type) {
-	case *ast.Ident:
-		return t.Name, false
-	case *ast.SelectorExpr:
-		if _, ok := t.X.(*ast.Ident); ok {
-			// only possible for qualified type names;
-			// assume type is imported
-			return t.Sel.Name, true
-		}
-	case *ast.StarExpr:
-		return baseTypeName(t.X)
-	}
-	return
 }
 
 func (w *Walker) peekFuncDecl(f *ast.FuncDecl) {
@@ -3733,13 +3743,12 @@ const goarchList = "386 amd64 arm "
 // suffix which does not match the current system.
 // The recognized name formats are:
 //
-//     name_$(GOOS).*
-//     name_$(GOARCH).*
-//     name_$(GOOS)_$(GOARCH).*
-//     name_$(GOOS)_test.*
-//     name_$(GOARCH)_test.*
-//     name_$(GOOS)_$(GOARCH)_test.*
-//
+//	name_$(GOOS).*
+//	name_$(GOARCH).*
+//	name_$(GOOS)_$(GOARCH).*
+//	name_$(GOOS)_test.*
+//	name_$(GOARCH)_test.*
+//	name_$(GOOS)_$(GOARCH)_test.*
 func isOSArchFile(ctxt *build.Context, name string) bool {
 	if dot := strings.Index(name, "."); dot != -1 {
 		name = name[:dot]

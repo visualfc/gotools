@@ -138,10 +138,10 @@ func NewFilePackage(filename string) (*PackageView, error) {
 	}
 	m := make(map[string]*ast.File)
 	m[filename] = file
-	pkg, err := ast.NewPackage(p.fset, m, nil, nil)
-	if err != nil {
-		return nil, err
-	}
+	// ast.NewPackage reports predeclared identifiers such as `any` as
+	// undeclared when no universe scope is supplied. The documentation view
+	// only needs the parsed files, so avoid the deprecated resolver here.
+	pkg := &ast.Package{Name: file.Name.Name, Files: m}
 	p.pkg = pkg
 	p.pdoc = NewPackageDoc(pkg, pkg.Name, true)
 	return p, nil
@@ -221,10 +221,10 @@ func NewFilePackageSource(filename string, f io.Reader, expr bool) (*PackageView
 	}
 	m := make(map[string]*ast.File)
 	m[filename] = file
-	pkg, err := ast.NewPackage(p.fset, m, nil, nil)
-	if err != nil {
-		return nil, err
-	}
+	// ast.NewPackage reports predeclared identifiers such as `any` as
+	// undeclared when no universe scope is supplied. The documentation view
+	// only needs the parsed files, so avoid the deprecated resolver here.
+	pkg := &ast.Package{Name: file.Name.Name, Files: m}
 
 	p.pdoc = NewPackageDoc(pkg, pkg.Name, true)
 	return p, nil

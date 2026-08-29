@@ -7,6 +7,8 @@ package gofmt
 import (
 	"bytes"
 	"fmt"
+	"go/ast"
+	"go/parser"
 	"go/token"
 	"io"
 	"io/ioutil"
@@ -43,7 +45,7 @@ var (
 	gofmtTabIndent bool
 )
 
-//func init
+// func init
 func init() {
 	Command.Flag.BoolVar(&gofmtList, "l", false, "list files whose formatting differs from goimport's")
 	Command.Flag.BoolVar(&gofmtWrite, "w", false, "write result to (source) file instead of stdout")
@@ -129,6 +131,9 @@ func processFile(filename string, in io.Reader, out io.Writer, stdin bool) error
 	if err != nil {
 		return err
 	}
+	if gofmtFixImports {
+		res = collapseBlankLines(res)
+	}
 
 	if !bytes.Equal(src, res) {
 		// formatting has changed
@@ -164,6 +169,27 @@ func processFile(filename string, in io.Reader, out io.Writer, stdin bool) error
 	}
 
 	return err
+}
+
+func collapseBlankLines(src []byte) []byte {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "", src, parser.ParseComments)
+	if err != nil || len(file.Decls) == 0 {
+		return src
+	}
+	limit := len(src)
+	for _, decl := range file.Decls {
+		if gen, ok := decl.(*ast.GenDecl); ok && gen.Tok == token.IMPORT {
+			continue
+		}
+		limit = fset.Position(decl.Pos()).Offset
+		break
+	}
+	prefix := src[:limit]
+	for bytes.Contains(prefix, []byte("\n\n\n")) {
+		prefix = bytes.ReplaceAll(prefix, []byte("\n\n\n"), []byte("\n\n"))
+	}
+	return append(prefix, src[limit:]...)
 }
 
 func visitFile(path string, f os.FileInfo, err error) error {

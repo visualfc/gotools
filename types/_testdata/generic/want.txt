@@ -1,0 +1,20 @@
+defs|types.go:3:6|Box
+defs|types.go:7:6|Pair
+defs|types.go:12:6|Numeric
+defs|types.go:16:6|Slice
+defs|methods.go:5:6|Identity
+defs|methods.go:7:6|Map
+defs|methods.go:15:6|Sum
+uses|methods.go:18:7|Box
+uses|methods.go:19:7|Pair
+uses|methods.go:20:12|Slice
+uses|methods.go:21:12|Map
+uses|methods.go:22:13|Sum
+info|methods.go:18:7|github.com/visualfc/gotools/types/_testdata/generic.Box[int]
+info|methods.go:20:12|github.com/visualfc/gotools/types/_testdata/generic.Slice[int]
+instances|methods.go:18:7|Box|[int]
+instances|methods.go:19:7|Pair|[string, int]
+instances|methods.go:20:12|Slice|[int]
+instances|methods.go:21:12|Map|[int, int]
+instances|methods.go:21:49|Identity|[int]
+instances|methods.go:22:13|Sum|[int]

@@ -1,0 +1,9 @@
+package|fixture
+doc|Package fixture demonstrates documentation extraction.
+import|fmt
+type|Box|Box stores one value.
+method|Box|Get|Get returns the stored value.
+type|Pair|Pair contains two values.
+func|Format|Format formats a value.
+func|Identity|Identity returns its argument.
+factory|Pair|NewPair|NewPair constructs a Pair.

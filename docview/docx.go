@@ -31,7 +31,6 @@ type typeDoc struct {
 // in the respective AST nodes so that they are not printed
 // twice (once when printing the documentation and once when
 // printing the corresponding AST node).
-//
 type docReader struct {
 	doc     *ast.CommentGroup // package documentation, if any
 	pkgName string
@@ -106,6 +105,10 @@ func docBaseTypeName(typ ast.Expr, showAll bool) string {
 			return t.Name
 		}
 	case *ast.StarExpr:
+		return docBaseTypeName(t.X, showAll)
+	case *ast.IndexExpr:
+		return docBaseTypeName(t.X, showAll)
+	case *ast.IndexListExpr:
 		return docBaseTypeName(t.X, showAll)
 	}
 	return ""
@@ -285,7 +288,6 @@ var (
 
 // addFile adds the AST for a source file to the docReader.
 // Adding the same AST multiple times is a no-op.
-//
 func (doc *docReader) addFile(src *ast.File) {
 	// add package documentation
 	if src.Doc != nil {
@@ -339,7 +341,6 @@ func NewPackageDoc(pkg *ast.Package, importpath string, showAll bool) *PackageDo
 
 // ValueDoc is the documentation for a group of declared
 // values, either vars or consts.
-//
 type ValueDoc struct {
 	Doc   string
 	Decl  *ast.GenDecl
@@ -393,7 +394,6 @@ func makeValueDocs(list []*ast.GenDecl, tok token.Token) []*ValueDoc {
 
 // FuncDoc is the documentation for a func declaration,
 // either a top-level function or a method function.
-//
 type FuncDoc struct {
 	Doc  string
 	Recv ast.Expr // TODO(rsc): Would like string here
@@ -520,7 +520,6 @@ func makeBugDocs(list []*ast.CommentGroup) []string {
 }
 
 // PackageDoc is the documentation for an entire package.
-//
 type PackageDoc struct {
 	PackageName string
 	ImportPath  string
@@ -535,7 +534,6 @@ type PackageDoc struct {
 }
 
 // newDoc returns the accumulated documentation for the package.
-//
 func (doc *docReader) newDoc(importpath string, filenames []string) *PackageDoc {
 	p := new(PackageDoc)
 	p.PackageName = doc.pkgName
@@ -658,7 +656,6 @@ func filterTypeDocs(a []*TypeDoc, f Filter) []*TypeDoc {
 
 // Filter eliminates documentation for names that don't pass through the filter f.
 // TODO: Recognize "Type.Method" as a name.
-//
 func (p *PackageDoc) Filter(f Filter) {
 	p.Consts = filterValueDocs(p.Consts, f)
 	p.Vars = filterValueDocs(p.Vars, f)
