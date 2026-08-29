@@ -31,7 +31,9 @@ func TestFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.TrimSpace(got.String()) != strings.TrimSpace(string(want)) {
+	gotText := strings.ReplaceAll(strings.TrimSpace(got.String()), "\\", "/")
+	wantText := strings.TrimSpace(strings.ReplaceAll(string(want), "\\", "/"))
+	if gotText != wantText {
 		t.Fatalf("file tree mismatch\n got:\n%s\nwant:\n%s", got.String(), want)
 	}
 }

@@ -68,6 +68,7 @@ func checkWant(t *testing.T, filename string, fset *token.FileSet, conf *PkgConf
 		t.Fatal(err)
 	}
 	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		line = strings.TrimSpace(line)
 		parts := strings.Split(line, "|")
 		if len(parts) < 2 || len(parts) > 4 {
 			t.Fatalf("invalid want line %q", line)

@@ -250,7 +250,7 @@ func testFiles(t *testing.T, name string) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := strings.TrimSpace(string(wantBytes))
+	want := strings.TrimSpace(strings.ReplaceAll(string(wantBytes), "\r\n", "\n"))
 	got := strings.TrimSpace(strings.Join(w.Features(""), "\n"))
 	if got != want {
 		t.Fatalf("API features mismatch:\n got:\n%s\nwant:\n%s", got, want)
