@@ -82,6 +82,25 @@ func sameNamed(n1, n2 *types.Named) bool {
 	return n1 != nil && n2 != nil && n1.Origin().String() == n2.Origin().String()
 }
 
+// orgType unwraps aliases and a single pointer so callers can match the
+// underlying named type. This is required for type aliases such as
+// `type Builder = *aBuilder`, where go/types keeps a *types.Alias.
+func orgType(typ types.Type) types.Type {
+	if typ == nil {
+		return nil
+	}
+	typ = types.Unalias(typ)
+	if pt, ok := typ.(*types.Pointer); ok {
+		return types.Unalias(pt.Elem())
+	}
+	return typ
+}
+
+func parseNamed(typ types.Type) (named *types.Named, ok bool) {
+	named, ok = orgType(typ).(*types.Named)
+	return
+}
+
 // func init
 func init() {
 	Command.Flag.BoolVar(&typesVerbose, "v", false, "verbose debugging")
@@ -1143,7 +1162,11 @@ func (w *PkgWalker) lookupNamedMethod(named *types.Named, name string) (types.Ob
 		}
 	Embedded:
 		for i := 0; i < iface.NumEmbeddeds(); i++ {
-			if obj, na := w.lookupNamedMethod(iface.Embedded(i), name); obj != nil {
+			embedded, ok := parseNamed(iface.EmbeddedType(i))
+			if !ok {
+				continue
+			}
+			if obj, na := w.lookupNamedMethod(embedded, name); obj != nil {
 				return obj, na
 			}
 		}
@@ -1161,10 +1184,12 @@ func (w *PkgWalker) lookupNamedMethod(named *types.Named, name string) (types.Ob
 			if !field.Anonymous() {
 				continue
 			}
-			if typ, ok := field.Type().(*types.Named); ok {
-				if obj, na := w.lookupNamedMethod(typ, name); obj != nil {
-					return obj, na
-				}
+			embedded, ok := parseNamed(field.Type())
+			if !ok {
+				continue
+			}
+			if obj, na := w.lookupNamedMethod(embedded, name); obj != nil {
+				return obj, na
 			}
 		}
 	}
@@ -1222,13 +1247,6 @@ func IsSameObject(a, b types.Object, kind ObjKind) bool {
 	return a.String() == b.String()
 }
 
-func orgType(typ types.Type) types.Type {
-	if pt, ok := typ.(*types.Pointer); ok {
-		return pt.Elem()
-	}
-	return typ
-}
-
 func findScope(s *types.Scope, pos token.Pos) *types.Scope {
 	for i := 0; i < s.NumChildren(); i++ {
 		child := s.Child(i)
@@ -1240,19 +1258,15 @@ func findScope(s *types.Scope, pos token.Pos) *types.Scope {
 }
 
 func (w *PkgWalker) lookupNamed(obj types.Object, cname string) types.Object {
-	typ := orgType(obj.Type())
-	if typ != nil {
-		if name, ok := typ.(*types.Named); ok {
-			obj, na := w.lookupNamedFieldVar(name, cname)
-			if na != nil {
-				return obj
-			} else {
-				obj, na := w.lookupNamedMethod(name, cname)
-				if na != nil {
-					return obj
-				}
-			}
-		}
+	name, ok := parseNamed(obj.Type())
+	if !ok {
+		return nil
+	}
+	if obj, na := w.lookupNamedFieldVar(name, cname); na != nil {
+		return obj
+	}
+	if obj, na := w.lookupNamedMethod(name, cname); na != nil {
+		return obj
 	}
 	return nil
 }
@@ -1339,35 +1353,15 @@ func (w *PkgWalker) LookupByText(pkgInfo *types.Info, text string) types.Object 
 	return cursorObj
 }
 
-func parseNamed(typ types.Type) (named *types.Named, ok bool) {
-	if t, ok := typ.(*types.Pointer); ok {
-		typ = t.Elem()
-	}
-	named, ok = typ.(*types.Named)
-	return
-}
-
 func parserMethod(obj types.Object) (named *types.Named, method string, ok bool) {
-	if obj == nil {
+	if obj == nil || obj.Type() == nil {
 		return
 	}
-	typ := obj.Type()
-	if typ == nil {
+	sig, isSig := obj.Type().(*types.Signature)
+	if !isSig || sig.Recv() == nil {
 		return
 	}
-	sig, ok := typ.(*types.Signature)
-	if !ok {
-		return
-	}
-	recv := sig.Recv()
-	if recv == nil {
-		return
-	}
-	typ = recv.Type()
-	if t, ok := typ.(*types.Pointer); ok {
-		typ = t.Elem()
-	}
-	named, ok = typ.(*types.Named)
+	named, ok = parseNamed(sig.Recv().Type())
 	method = obj.Name()
 	return
 }
@@ -1506,6 +1500,13 @@ func (w *PkgWalker) LookupObjects(conf *PkgConfig, cursor *FileCursor) error {
 					if sameNamed(named, n) {
 						usages = append(usages, int(id.Pos()))
 					}
+				}
+			}
+		}
+		if cursorObj != nil {
+			for id, obj := range pkgInfo.Uses {
+				if obj == cursorObj {
+					usages = append(usages, int(id.Pos()))
 				}
 			}
 		}
@@ -2008,7 +2009,7 @@ func (w *PkgWalker) CheckObjectInfo(cursorObj types.Object, cursorSelection *typ
 	if kind == ObjMethod && cursorSelection != nil && cursorSelection.Recv() != nil {
 		sig := cursorObj.(*types.Func).Type().Underlying().(*types.Signature)
 		if _, ok := sig.Recv().Type().Underlying().(*types.Interface); ok {
-			if named, ok := cursorSelection.Recv().(*types.Named); ok {
+			if named, ok := parseNamed(cursorSelection.Recv()); ok {
 				obj, na := w.lookupNamedMethod(named, cursorObj.Name())
 				if obj != nil && na != nil {
 					cursorObj = obj
@@ -2056,7 +2057,10 @@ func (w *PkgWalker) CheckObjectInfo(cursorObj types.Object, cursorSelection *typ
 			if cursorIsInterfaceMethod {
 				for k, v := range conf.Info.Defs {
 					if k != nil && v != nil && IsSameObject(v, cursorInterfaceTypeNamed.Obj(), kind) {
-						named := v.Type().(*types.Named)
+						named, ok := parseNamed(v.Type())
+						if !ok {
+							continue
+						}
 						obj, typ := w.lookupNamedMethod(named, cursorObj.Name())
 						if obj != nil && typ != nil {
 							cursorObj = obj
