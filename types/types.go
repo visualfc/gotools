@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -256,8 +257,11 @@ func runTypes(cmd *command.Command, args []string) error {
 		}
 		conf := NewPkgConfig(false, !typesSkipTests)
 		pkg, outconf, err := w.Check(pkgName, conf, cursor)
+		if err != nil {
+			return fmt.Errorf("error loading package %q: %w", pkgName, err)
+		}
 		if pkg == nil {
-			return fmt.Errorf("error import path %v", err)
+			return fmt.Errorf("error loading package %q: no package returned", pkgName)
 		}
 		if cursor != nil && w.findMode.IsValid() {
 			return w.LookupCursor(pkg, outconf, cursor)
@@ -501,9 +505,11 @@ func (w *PkgWalker) checkFiles(dir string, files []string) *FilesCheck {
 
 func (w *PkgWalker) ImportHelper(parentDir string, name string, import_path string, conf *PkgConfig, cursor *FileCursor) (pkg *types.Package, outconf *PkgConfig, err error) {
 	defer func() {
-		err := recover()
-		if err != nil && typesVerbose {
-			fmt.Println(w.cmd.Stderr, err)
+		if recovered := recover(); recovered != nil {
+			err = fmt.Errorf("panic while loading package %q: %v", name, recovered)
+			if typesVerbose {
+				fmt.Fprintf(w.cmd.Stderr, "%v\n%s", err, debug.Stack())
+			}
 		}
 	}()
 
