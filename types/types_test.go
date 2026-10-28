@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/build"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -19,6 +20,16 @@ func TestTypes(t *testing.T) {
 		t.Fatalf("error %v\n", err)
 	}
 	w.LookupCursor(pkg, conf, cursor)
+}
+
+func TestImportHelperReturnsRecoveredPanics(t *testing.T) {
+	w := NewPkgWalker(nil)
+	w.SetOutput(os.Stdout, os.Stderr)
+
+	_, _, err := w.ImportHelper("", "example.com/panic", "", DefaultPkgConfig(), nil)
+	if err == nil || !strings.Contains(err.Error(), "panic while loading package") {
+		t.Fatalf("ImportHelper error = %v, want recovered panic error", err)
+	}
 }
 
 func test_error() {
