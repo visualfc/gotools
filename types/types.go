@@ -257,11 +257,15 @@ func runTypes(cmd *command.Command, args []string) error {
 		}
 		conf := NewPkgConfig(false, !typesSkipTests)
 		pkg, outconf, err := w.Check(pkgName, conf, cursor)
-		if err != nil {
-			return fmt.Errorf("error loading package %q: %w", pkgName, err)
-		}
+		// Check reports type errors even when it still returns a usable package.
 		if pkg == nil {
+			if err != nil {
+				return fmt.Errorf("error loading package %q: %w", pkgName, err)
+			}
 			return fmt.Errorf("error loading package %q: no package returned", pkgName)
+		}
+		if err != nil && typesVerbose {
+			fmt.Fprintln(cmd.Stderr, err)
 		}
 		if cursor != nil && w.findMode.IsValid() {
 			return w.LookupCursor(pkg, outconf, cursor)
